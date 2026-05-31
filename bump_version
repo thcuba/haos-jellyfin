@@ -60,6 +60,9 @@ done
 # Set the version in the GitHub issue template file
 sed -i "s|${old_version}|${new_version_sed}|g" "${issue_template_file}"
 
+# Set the version in the HAOS config file
+sed -i "s|version: \"${old_version}\"|version: \"${new_version_sed}\"|g" "haos-jellyfin/config.yaml"
+
 # Stage the changed files for commit
 git add .
 git status -v
