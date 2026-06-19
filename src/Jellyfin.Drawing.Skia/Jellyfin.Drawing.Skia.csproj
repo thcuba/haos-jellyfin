@@ -11,6 +11,11 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <!-- TODO: Remove once we update SkiaSharp > 2.88.5 -->
     <NoWarn>NU1903</NoWarn>
+    <Authors>Jellyfin Contributors</Authors>
+    <PackageId>Jellyfin.Drawing.Skia</PackageId>
+    <VersionPrefix>12.0.1</VersionPrefix>
+    <RepositoryUrl>https://github.com/jellyfin/jellyfin</RepositoryUrl>
+    <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>

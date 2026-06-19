@@ -3,7 +3,7 @@ on:
   pull_request:
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
 
 jobs:
@@ -76,6 +76,7 @@ jobs:
   abi-diff:
     permissions:
       pull-requests: write  #  to create or update comment (peter-evans/create-or-update-comment)
+      issues: write
 
     name: ABI - Difference
     if: contains(github.repository, 'haos-jellyfin') && github.event_name == 'pull_request'
@@ -107,7 +108,7 @@ jobs:
         run: |
           {
             echo 'body<<EOF'
-            for file in jellyfin.dll Jellyfin.Api.dll Jellyfin.Data.dll Jellyfin.Server.Implementations.dll MediaBrowser.Common.dll MediaBrowser.Controller.dll MediaBrowser.Model.dll MediaBrowser.MediaEncoding.dll Emby.Naming.dll Emby.Server.Implementations.dll Jellyfin.Extensions.dll Jellyfin.MediaEncoding.Keyframes.dll Jellyfin.MediaEncoding.Hls.dll Jellyfin.Database.Implementations.dll; do
+            for file in jellyfin.dll Jellyfin.Api.dll Jellyfin.Data.dll Jellyfin.Server.Implementations.dll MediaBrowser.Common.dll MediaBrowser.Controller.dll MediaBrowser.Model.dll MediaBrowser.MediaEncoding.dll Emby.Naming.dll Emby.Server.Implementations.dll Jellyfin.Extensions.dll Jellyfin.MediaEncoding.Keyframes.dll Jellyfin.MediaEncoding.Hls.dll Jellyfin.Database.Implementations.dll Jellyfin.Drawing.dll Jellyfin.Drawing.Skia.dll Jellyfin.LiveTv.dll Jellyfin.Networking.dll; do
               COMPAT_OUTPUT="$( { apicompat --left ./abi-base/${file} --right ./abi-head/${file}; } 2>&1 || true )"
               if [ "APICompat ran successfully without finding any breaking changes." != "${COMPAT_OUTPUT}" ]; then
                 printf "\n%s\n%s\n" "${file}" "${COMPAT_OUTPUT}"
