@@ -256,7 +256,24 @@ namespace Emby.Server.Implementations
         /// Gets the current application name.
         /// </summary>
         /// <value>The application name.</value>
-        public string ApplicationProductName { get; } = FileVersionInfo.GetVersionInfo(Assembly.GetEntryAssembly().Location).ProductName;
+        public string ApplicationProductName { get; } = GetProductName();
+
+        private static string GetProductName()
+        {
+            var entryAssembly = Assembly.GetEntryAssembly();
+            if (entryAssembly == null)
+            {
+                return "Jellyfin Server";
+            }
+
+            var productName = FileVersionInfo.GetVersionInfo(entryAssembly.Location).ProductName;
+            if (string.IsNullOrEmpty(productName))
+            {
+                return "Jellyfin Server";
+            }
+
+            return productName;
+        }
 
         public string SystemId => _deviceId.Value;
 

@@ -2,6 +2,8 @@
 
   <!-- ProjectGuid is only included as a requirement for SonarQube analysis -->
   <PropertyGroup>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <NoWarn>SA0001;CS1591</NoWarn>
     <ProjectGuid>{42816EA8-4511-4CBF-A9C7-7791D5DDDAE6}</ProjectGuid>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
@@ -22,4 +24,8 @@
     <ProjectReference Include="../../src/Jellyfin.Networking/Jellyfin.Networking.csproj" />
   </ItemGroup>
 
+
+  <ItemGroup>
+    <Compile Include="../../SharedVersion.cs" />
+  </ItemGroup>
 </Project>

@@ -2,6 +2,8 @@
 
   <!-- ProjectGuid is only included as a requirement for SonarQube analysis -->
   <PropertyGroup>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <NoWarn>SA0001;CS1591</NoWarn>
     <ProjectGuid>{DF194677-DFD3-42AF-9F75-D44D5A416478}</ProjectGuid>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
@@ -22,4 +24,8 @@
     <ProjectReference Include="../../MediaBrowser.Providers/MediaBrowser.Providers.csproj" />
   </ItemGroup>
 
+
+  <ItemGroup>
+    <Compile Include="../../SharedVersion.cs" />
+  </ItemGroup>
 </Project>

@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <NoWarn>SA0001;CS1591</NoWarn>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
 
@@ -36,4 +38,8 @@
     </None>
   </ItemGroup>
 
+
+  <ItemGroup>
+    <Compile Include="../../SharedVersion.cs" />
+  </ItemGroup>
 </Project>

@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <NoWarn>SA0001;CS1591</NoWarn>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
 
@@ -26,4 +28,8 @@
     <ProjectReference Include="../../MediaBrowser.Providers/MediaBrowser.Providers.csproj" />
   </ItemGroup>
 
+
+  <ItemGroup>
+    <Compile Include="../../SharedVersion.cs" />
+  </ItemGroup>
 </Project>
