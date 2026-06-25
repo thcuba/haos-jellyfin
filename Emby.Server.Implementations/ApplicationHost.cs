@@ -258,23 +258,6 @@ namespace Emby.Server.Implementations
         /// <value>The application name.</value>
         public string ApplicationProductName { get; } = GetProductName();
 
-        private static string GetProductName()
-        {
-            var entryAssembly = Assembly.GetEntryAssembly();
-            if (entryAssembly == null)
-            {
-                return "Jellyfin Server";
-            }
-
-            var productName = FileVersionInfo.GetVersionInfo(entryAssembly.Location).ProductName;
-            if (string.IsNullOrEmpty(productName))
-            {
-                return "Jellyfin Server";
-            }
-
-            return productName;
-        }
-
         public string SystemId => _deviceId.Value;
 
         /// <inheritdoc/>
@@ -293,6 +276,23 @@ namespace Emby.Server.Implementations
                 : ConfigurationManager.Configuration.ServerName;
 
         public string RestoreBackupPath { get; set; }
+
+        private static string GetProductName()
+        {
+            var entryAssembly = Assembly.GetEntryAssembly();
+            if (entryAssembly == null)
+            {
+                return "Jellyfin Server";
+            }
+
+            var productName = FileVersionInfo.GetVersionInfo(entryAssembly.Location).ProductName;
+            if (string.IsNullOrEmpty(productName))
+            {
+                return "Jellyfin Server";
+            }
+
+            return productName;
+        }
 
         public string ExpandVirtualPath(string path)
         {
