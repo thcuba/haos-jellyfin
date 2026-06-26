@@ -1,20 +1,15 @@
-name: Add-on Linter
-
+name: Addon Linter
 on:
   push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
-
+    branches: [ main ]
 jobs:
   linter:
     runs-on: ubuntu-latest
-    if: ${{ contains(github.repository, 'haos-jellyfin') }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Run Home Assistant Add-on Linter
-        uses: frenck/action-addon-linter@v2.18.0
+      - name: Lint with official Home Assistant action
+        uses: home-assistant/addon-linter@v1
         with:
-          path: "./haos-jellyfin"
+          name: 'haos-jellyfin'
+          version: '12.0.2'
