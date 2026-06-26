@@ -1,0 +1,3 @@
+---
+# https://developers.home-assistant.io/docs/addon_builder/
+image: ghcr.io/thcuba/haos-jellyfin-${{ platform }}
