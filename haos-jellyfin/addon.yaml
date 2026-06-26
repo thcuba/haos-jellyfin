@@ -13,7 +13,7 @@ map:
   - media:rw
 devices:
   - /dev/dri
-image: ghcr.io/thcuba/haos-jellyfin/{arch}
+image: ghcr.io/thcuba/haos-jellyfin-{arch}
 ports:
   8096/tcp: 8096
 webui: "http://[HOST]:[PORT:8096]"
