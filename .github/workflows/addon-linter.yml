@@ -4,12 +4,20 @@ on:
     branches: [ main ]
 jobs:
   linter:
+    if: contains(github.repository, 'haos-jellyfin')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup EnvVars
+        run: |
+          VERSION=$(yq -r '.version' haos-jellyfin/config.yaml)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
       - name: Lint with official Home Assistant action
         uses: home-assistant/addon-linter@v1
         with:
           name: 'haos-jellyfin'
-          version: '12.0.2'
+          path: 'haos-jellyfin'
+          version: ${{ env.VERSION }}
