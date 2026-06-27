@@ -4,9 +4,14 @@ on:
   schedule:
     - cron: '0 0 * * 0'  # Weekly on Sunday
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   bump-version:
     runs-on: ubuntu-latest
+    if: contains(github.repository, 'haos-jellyfin')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -16,22 +21,38 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Calculate next version
+        id: version
+        run: |
+          CURRENT_VERSION=$(yq -r '.version' haos-jellyfin/config.yaml)
+          echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV
+
+          # Increment patch version
+          IFS='.' read -ra ADDR <<< "$CURRENT_VERSION"
+          PATCH=$((ADDR[2] + 1))
+          NEW_VERSION="${ADDR[0]}.${ADDR[1]}.$PATCH"
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
       - name: Run version bump script
-        run: .
+        run: ./bump_version "${{ env.NEW_VERSION }}"
 
       - name: Commit and push changes
         run: |
+          BRANCH_NAME="version-bump-${{ env.NEW_VERSION }}"
+          git checkout -b "$BRANCH_NAME"
           git add .
-          git commit -m "Bump version"
-          git push origin main
+          git commit -m "Bump version to ${{ env.NEW_VERSION }}"
+          git push origin "$BRANCH_NAME"
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
 
       - name: Create Pull Request
         uses: repo-sync/pull-request@v2
         with:
-          source_branch: main
-          target_branch: main
-          pr_title: "Automated version bump"
+          source_branch: ${{ env.BRANCH_NAME }}
+          target_branch: master
+          pr_title: "Automated version bump to ${{ env.NEW_VERSION }}"
           pr_body: |
-            This PR contains an automated version bump.
+            This PR contains an automated version bump to ${{ env.NEW_VERSION }}.
             Please review the changes and merge if everything looks good.
           github_token: ${{ secrets.GITHUB_TOKEN }}
