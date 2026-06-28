@@ -1,7 +1,7 @@
 name: Addon Linter
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
 jobs:
   linter:
     if: contains(github.repository, 'haos-jellyfin')

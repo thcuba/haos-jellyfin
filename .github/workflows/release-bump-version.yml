@@ -53,7 +53,7 @@ jobs:
         uses: repo-sync/pull-request@v2
         with:
           source_branch: "v${{ env.NEXT_VERSION }}"
-          target_branch: "main"
+          target_branch: "master"
           pr_title: "Automated version bump to v${{ env.NEXT_VERSION }}"
           pr_body: |
             This PR contains an automated version bump to v${{ env.NEXT_VERSION }}.
