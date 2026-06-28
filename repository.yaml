@@ -1,3 +1,7 @@
 name: "Jellyfin HAOS Repository"
 url: "https://github.com/thcuba/haos-jellyfin"
 maintainer: "thcuba"
+homeassistant: "2024.1.0"
+channels:
+  - stable
+  - beta
