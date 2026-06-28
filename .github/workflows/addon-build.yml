@@ -1,7 +1,7 @@
 name: Addon Build
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   workflow_dispatch:
 
 jobs:
@@ -36,7 +36,7 @@ jobs:
           push: true
           tags: |
             ghcr.io/thcuba/haos-jellyfin:latest
-            ghcr.io/thcuba/haos-jellyfin:${{ github.ref_name }}
+            ghcr.io/thcuba/haos-jellyfin:${{ env.VERSION }}
 
       - name: Create Release
         if: github.event_name == 'push'
