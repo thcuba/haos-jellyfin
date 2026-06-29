@@ -46,6 +46,7 @@ jellyfin_subprojects=(
 )
 issue_template_file="./.github/ISSUE_TEMPLATE/issue report.yml"
 haos_config_file="./haos-jellyfin/config.yaml"
+haos_addon_file="./haos-jellyfin/addon.yaml"
 haos_changelog_file="./haos-jellyfin/CHANGELOG.md"
 
 new_version="$1"
@@ -59,7 +60,8 @@ if [[ -f ${shared_version_file} ]]; then
     )"
     echo "old assembly version: ${old_version}"
     # Replace the versions in AssemblyVersion, AssemblyFileVersion, and AssemblyInformationalVersion attributes
-    sed -i -E "s/(\[assembly: ?Assembly(File|Informational)?Version\(\")${old_version}(\"\)\])/\1${new_version_sed}\3/g" "${shared_version_file}"
+    # Use anchored regexes with backreferences for safer replacement
+    sed -i -E "s/^(\[assembly: ?Assembly(File|Informational)?Version\(\")${old_version}(\"\)\])$/\1${new_version_sed}\3/" "${shared_version_file}"
 fi
 
 # update nuget package version
@@ -74,8 +76,8 @@ for subproject in ${jellyfin_subprojects[@]}; do
         )"
         echo "old nuget version: ${old_version}"
 
-        # Set the nuget version to the specified new_version
-        sed -i "s|<VersionPrefix>${old_version}</VersionPrefix>|<VersionPrefix>${new_version_sed}</VersionPrefix>|g" "${subproject}"
+        # Set the nuget version to the specified new_version using anchored regex
+        sed -i -E "s|(<VersionPrefix>)${old_version}(</VersionPrefix>)|\1${new_version_sed}\2|g" "${subproject}"
     fi
 done
 
@@ -88,12 +90,13 @@ if [[ -f ${issue_template_file} ]]; then
     fi
 fi
 
-# Set the version in the HAOS config file
-if [[ -f ${haos_config_file} ]]; then
-    old_haos_version=$(grep "^version: " "${haos_config_file}" | cut -d '"' -f 2)
-    echo old HAOS version: $old_haos_version
-    sed -i "s|version: \"${old_haos_version}\"|version: \"${new_version_sed}\"|g" "${haos_config_file}"
-fi
+# Set the version in the HAOS yaml files
+for haos_file in "${haos_config_file}" "${haos_addon_file}"; do
+    if [[ -f ${haos_file} ]]; then
+        # Use sed with backreferences to update both quoted and unquoted version strings
+        sed -i -E "s/^(version: )(\"?)?[0-9\.]+(\"?)?/\1\2${new_version_sed}\3/" "${haos_file}"
+    fi
+done
 
 # Update HAOS changelog
 if [[ -f ${haos_changelog_file} ]]; then
