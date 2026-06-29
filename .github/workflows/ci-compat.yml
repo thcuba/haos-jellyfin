@@ -53,12 +53,10 @@ jobs:
           dotnet-version: "10.0.103"
 
       - name: Checkout common ancestor
-        env:
-          HEAD_REF: ${{ github.head_ref }}
         run: |
           git remote add upstream https://github.com/${{ github.event.pull_request.base.repo.full_name }} || true
           git -c protocol.version=2 fetch --prune --progress --no-recurse-submodules upstream +refs/heads/*:refs/remotes/upstream/* +refs/tags/*:refs/tags/*
-          ANCESTOR_REF=$(git merge-base upstream/${{ github.base_ref }} origin/$HEAD_REF)
+          ANCESTOR_REF=$(git merge-base upstream/${{ github.base_ref }} HEAD)
           git checkout --progress --force $ANCESTOR_REF
 
       - name: Build
