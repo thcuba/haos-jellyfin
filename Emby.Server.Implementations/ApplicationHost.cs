@@ -256,7 +256,7 @@ namespace Emby.Server.Implementations
         /// Gets the current application name.
         /// </summary>
         /// <value>The application name.</value>
-        public string ApplicationProductName { get; } = FileVersionInfo.GetVersionInfo(Assembly.GetEntryAssembly().Location).ProductName;
+        public string ApplicationProductName { get; } = GetProductName();
 
         public string SystemId => _deviceId.Value;
 
@@ -890,6 +890,18 @@ namespace Emby.Server.Implementations
         protected abstract IEnumerable<Assembly> GetAssembliesWithPartsInternal();
 
         /// <inheritdoc/>
+        private static string GetProductName()
+        {
+            var assembly = Assembly.GetEntryAssembly();
+            if (assembly == null)
+            {
+                return "Jellyfin Server";
+            }
+
+            var productName = FileVersionInfo.GetVersionInfo(assembly.Location).ProductName;
+            return string.IsNullOrEmpty(productName) ? "Jellyfin Server" : productName;
+        }
+
         public string GetSmartApiUrl(IPAddress remoteAddr)
         {
             // Published server ends with a /

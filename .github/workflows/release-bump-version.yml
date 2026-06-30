@@ -8,6 +8,7 @@ on:
 
 jobs:
   bump-version:
+    if: contains(github.repository, 'haos-jellyfin')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -26,7 +27,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.sha }}
-          timeout: 60
+          timeout: 600
 
       - name: Set up Git
         run: |
