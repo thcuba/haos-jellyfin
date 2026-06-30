@@ -889,7 +889,10 @@ namespace Emby.Server.Implementations
 
         protected abstract IEnumerable<Assembly> GetAssembliesWithPartsInternal();
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Gets the product name of the entry assembly.
+        /// </summary>
+        /// <returns>The product name, or "Jellyfin Server" if not available.</returns>
         private static string GetProductName()
         {
             var assembly = Assembly.GetEntryAssembly();
