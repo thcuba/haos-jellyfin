@@ -9,6 +9,7 @@ on:
 jobs:
   bump-version:
     runs-on: ubuntu-latest
+    if: contains(github.repository, 'haos-jellyfin')
     permissions:
       contents: write
       pull-requests: write
@@ -26,7 +27,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.sha }}
-          timeout: 60
+          timeout: 600
 
       - name: Set up Git
         run: |
@@ -35,7 +36,9 @@ jobs:
 
       - name: Calculate next version
         run: |
-          NEXT_VERSION=$(echo ${{ env.VERSION }} | awk -F. '{$NF = $NF + 1;} OFS=. {print $0}')
+          # Use yq -r to get the version string without quotes
+          VERSION=$(yq -r '.version' haos-jellyfin/config.yaml)
+          NEXT_VERSION=$(echo $VERSION | awk -F. '{$NF = $NF + 1;} OFS=. {print $0}')
           echo "NEXT_VERSION=$NEXT_VERSION" >> $GITHUB_ENV
 
       - name: Run version bump script
@@ -43,7 +46,7 @@ jobs:
 
       - name: Commit and push changes
         run: |
-          BRANCH="v${{ env.NEXT_VERSION }}"
+          BRANCH="version-bump-${{ env.NEXT_VERSION }}"
           git checkout -b "$BRANCH"
           git add .
           git commit -m "Bump version to ${{ env.NEXT_VERSION }}"
@@ -52,7 +55,7 @@ jobs:
       - name: Create Pull Request
         uses: repo-sync/pull-request@v2
         with:
-          source_branch: "v${{ env.NEXT_VERSION }}"
+          source_branch: "version-bump-${{ env.NEXT_VERSION }}"
           target_branch: "master"
           pr_title: "Automated version bump to v${{ env.NEXT_VERSION }}"
           pr_body: |
