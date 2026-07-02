@@ -1,10 +1,8 @@
 name: Bump Version
 on:
   workflow_dispatch:
-  release:
-    types: [published]
   schedule:
-    - cron: '0 0 * * 0'  # Weekly on Sunday
+    - cron: '0 0 1 * *'  # Monthly on the 1st
 
 jobs:
   bump-version:
@@ -17,48 +15,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup EnvVars
-        run: |
-          VERSION=$(yq -r '.version' haos-jellyfin/config.yaml)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-
-      - name: Wait for CI
-        uses: jitterbit/await-check-suites@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          ref: ${{ github.sha }}
-          timeout: 600
-
-      - name: Set up Git
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
       - name: Calculate next version
         run: |
-          # Use yq -r to get the version string without quotes
           VERSION=$(yq -r '.version' haos-jellyfin/config.yaml)
-          NEXT_VERSION=$(echo $VERSION | awk -F. '{$NF = $NF + 1;} OFS=. {print $0}')
+          NEXT_VERSION=$(echo "$VERSION" | awk -F. '{$NF = $NF + 1;} OFS="." 1')
           echo "NEXT_VERSION=$NEXT_VERSION" >> $GITHUB_ENV
 
-      - name: Run version bump script
-        run: ./bump_version ${{ env.NEXT_VERSION }}
-
-      - name: Commit and push changes
+      - name: Bump version in config files
         run: |
-          BRANCH="version-bump-${{ env.NEXT_VERSION }}"
-          git checkout -b "$BRANCH"
-          git add .
-          git commit -m "Bump version to ${{ env.NEXT_VERSION }}"
-          git push origin "$BRANCH"
+          sed -i "s/^version: .*/version: \"${{ env.NEXT_VERSION }}\"/" haos-jellyfin/config.yaml
+          sed -i "s/^version: .*/version: \"${{ env.NEXT_VERSION }}\"/" haos-jellyfin/addon.yaml 2>/dev/null || true
 
       - name: Create Pull Request
-        uses: repo-sync/pull-request@v2
+        uses: peter-evans/create-pull-request@v6
         with:
-          source_branch: "version-bump-${{ env.NEXT_VERSION }}"
-          target_branch: "master"
-          pr_title: "Automated version bump to v${{ env.NEXT_VERSION }}"
-          pr_body: |
-            This PR contains an automated version bump to v${{ env.NEXT_VERSION }}.
-            Please review the changes and merge if everything looks good.
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: version-bump-${{ env.NEXT_VERSION }}
+          title: "Bump version to ${{ env.NEXT_VERSION }}"
+          body: |
+            Automated version bump to ${{ env.NEXT_VERSION }}.
+            Please review and merge if acceptable.
+          base: master

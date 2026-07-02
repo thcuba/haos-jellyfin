@@ -3,6 +3,7 @@ version: "12.0.2"
 slug: "haos-jellyfin"
 description: "Jellyfin is a free software media system with full hardware acceleration support."
 url: "https://github.com/thcuba/haos-jellyfin"
+codeowners: ["@thcuba"]
 arch:
   - amd64
   - aarch64
@@ -11,11 +12,15 @@ map:
 devices:
   - /dev/dri
 webui: "http://[HOST]:[PORT:8096]"
+init: false
+image: "ghcr.io/thcuba/haos-jellyfin-{arch}"
 ports:
   8096/tcp: 8096
 options:
+  log_level: info
   host: "0.0.0.0"
   port: 8096
 schema:
-  host: str
-  port: port
+  log_level: list(trace|debug|info|notice|warning|error|fatal)?
+  host: str?
+  port: port?
