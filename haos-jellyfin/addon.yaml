@@ -1,7 +1,7 @@
 name: "Jellyfin Media Server"
 version: "12.0.2"
 slug: "haos-jellyfin"
-description: "Jellyfin media server with hardware acceleration"
+description: "Jellyfin is a free software media system with full hardware acceleration support (VA-API/Vulkan)."
 url: "https://github.com/thcuba/haos-jellyfin"
 codeowners: ["@thcuba"]
 requirements:
@@ -20,6 +20,10 @@ webui: "http://[HOST]:[PORT:8096]"
 options:
   host: "0.0.0.0"
   port: 8096
+  enable_vaapi: true
+  enable_vulkan: true
 schema:
   host: str
   port: port
+  enable_vaapi: bool
+  enable_vulkan: bool
