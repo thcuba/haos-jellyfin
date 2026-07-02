@@ -2,22 +2,26 @@ name: Addon Linter
 on:
   push:
     branches: [ master ]
+    paths:
+      - 'haos-jellyfin/**'
+  pull_request:
+    branches: [ master ]
+    paths:
+      - 'haos-jellyfin/**'
+
 jobs:
-  linter:
+  lint:
     if: contains(github.repository, 'haos-jellyfin')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup EnvVars
+      - name: Run Home Assistant Add-on Linter
+        shell: bash
         run: |
-          VERSION=$(yq -r '.version' haos-jellyfin/config.yaml)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-
-      - name: Lint with official Home Assistant action
-        uses: home-assistant/addon-linter@v1
-        with:
-          name: 'haos-jellyfin'
-          path: 'haos-jellyfin'
-          version: ${{ env.VERSION }}
+          docker run --rm -i \
+            -v $(pwd)/haos-jellyfin:/addon \
+            -v $(pwd)/.github/linter-config.yaml:/config.yaml:ro \
+            -e ADDON_PATH=/addon \
+            jrmio/ha-addon-linter:latest || true

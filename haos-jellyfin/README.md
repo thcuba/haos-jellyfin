@@ -1,30 +1,28 @@
 # Jellyfin Home Assistant Add-on
 
-Jellyfin is a Free Software Media System that puts you in control of managing and streaming your media. It is an alternative to the proprietary Emly and Plex, to provide media from a dedicated server to end-user devices via multiple apps.
+Jellyfin is a Free Software Media System that puts you in control of managing and streaming your media.
 
 ## Installation
 
-1. Add this repository URL to your Home Assistant instance.
-2. Search for the "Jellyfin Media Server" add-on.
-3. Click "Install".
-4. Once installed, configure the add-on and click "Start".
+1. Add this repository URL to your Home Assistant instance (Settings → Add-ons → Add-on Store → ⋮ → Repositories)
+2. Search for "Jellyfin Media Server"
+3. Click "Install" and then "Start"
+4. Open the Web UI from the add-on page
 
 ## Hardware Acceleration
 
-This add-on supports hardware acceleration for various GPUs.
+### Intel VA-API (default)
+Intel GPUs are detected automatically via `/dev/dri`. VA-API is enabled by default.
 
-### VA-API (Intel/AMD)
+### Additional options
+Available in the add-on configuration:
+- `log_level`: debug, info, notice, warning, error, fatal
+- `host`: listen address (default: 0.0.0.0)
+- `port`: listen port (default: 8096)
 
-To enable VA-API:
-1. Go to the Jellyfin dashboard.
-2. Navigate to "Playback" -> "Transcoding".
-3. Select "VA-API" as the hardware acceleration method.
-4. Ensure the correct device is selected (usually `/dev/dri/renderD128`).
-
-### Vulkan
-
-Vulkan is also supported for compatible hardware.
+## Architecture
+- amd64
+- aarch64
 
 ## Support
-
-For issues and feature requests, please visit the [GitHub repository](https://github.com/thcuba/haos-jellyfin).
+[GitHub Issues](https://github.com/thcuba/haos-jellyfin/issues)

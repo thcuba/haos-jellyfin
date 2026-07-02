@@ -2,6 +2,8 @@ name: Addon Build
 on:
   push:
     branches: [ master ]
+    paths:
+      - 'haos-jellyfin/**'
   workflow_dispatch:
 
 jobs:
@@ -13,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      packages: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -45,15 +48,23 @@ jobs:
             ghcr.io/thcuba/haos-jellyfin:latest-${{ matrix.arch }}
             ghcr.io/thcuba/haos-jellyfin:${{ env.VERSION }}-${{ matrix.arch }}
 
+      - name: Create Release manifest
+        if: github.event_name == 'push' && matrix.arch == 'amd64'
+        run: |
+          mkdir -p /tmp/release
+          yq -r '.version' haos-jellyfin/config.yaml > /tmp/release/version.txt
+          echo "haos-jellyfin" > /tmp/release/addon_name.txt
+
       - name: Create Release
         if: github.event_name == 'push' && matrix.arch == 'amd64'
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.VERSION }}
           name: Release v${{ env.VERSION }}
           body: |
-            Automated release for Jellyfin HAOS Addon.
-            Version: ${{ env.VERSION }}
+            ## Jellyfin Media Server v${{ env.VERSION }}
+            - Compatible with Home Assistant OS (amd64/aarch64)
+            - Hardware acceleration via VA-API/Vulkan
           draft: false
           prerelease: false
         env:
