@@ -48,12 +48,12 @@ if [[ -f ${shared_version_file} ]]; then
 fi
 
 # update nuget package version
-for subproject in ${jellyfin_subprojects[@]}; do
+for subproject in "${jellyfin_subprojects[@]}"; do
     if [[ -f ${subproject} ]]; then
         echo "${subproject}"
         # Parse the version from the *.csproj file
         old_version="$(
-            grep -m 1 "<VersionPrefix>" "${subproject}" \
+            grep -E -m 1 "<VersionPrefix>" "${subproject}" \
                 | awk '{$1=$1};1' \
                 | sed -E 's/<VersionPrefix>([0-9\.]+[-a-z0-9]*)<\/VersionPrefix>/\1/'
         )"
@@ -67,7 +67,7 @@ done
 # Set the version in the GitHub issue template file
 if [[ -f ${issue_template_file} ]]; then
     # Extract the first version from the options list in the issue template
-    old_issue_version=$(grep -m 1 "        - [0-9]" "${issue_template_file}" | awk '{print $2}')
+    old_issue_version=$(grep -E -m 1 "        - [0-9]" "${issue_template_file}" | awk '{print $2}')
     if [[ -n ${old_issue_version} ]]; then
         sed -i "s|        - ${old_issue_version}|        - ${new_version_sed}|g" "${issue_template_file}"
     fi
