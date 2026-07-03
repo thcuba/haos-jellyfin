@@ -26,6 +26,8 @@ jellyfin_subprojects=(
   MediaBrowser.Controller/MediaBrowser.Controller.csproj
   MediaBrowser.Model/MediaBrowser.Model.csproj
   Emby.Naming/Emby.Naming.csproj
+  Jellyfin.Api/Jellyfin.Api.csproj
+  src/Jellyfin.CodeAnalysis/Jellyfin.CodeAnalysis.csproj
   src/Jellyfin.Extensions/Jellyfin.Extensions.csproj
   src/Jellyfin.MediaEncoding.Keyframes/Jellyfin.MediaEncoding.Keyframes.csproj
   src/Jellyfin.Database/Jellyfin.Database.Implementations/Jellyfin.Database.Implementations.csproj
@@ -39,13 +41,9 @@ new_version_sed="$( cut -f1 -d'-' <<<"${new_version}" )"
 
 # Set the assembly version in SharedVersion.cs
 if [[ -f ${shared_version_file} ]]; then
-    old_version="$(
-        grep -E -m 1 "^\[assembly: ?AssemblyVersion" ${shared_version_file} \
-            | sed -E 's/\[assembly: ?AssemblyVersion\("([0-9\.]+)"\)\]/\1/'
-    )"
-    echo "old assembly version: ${old_version}"
     # Replace the versions in AssemblyVersion, AssemblyFileVersion, and AssemblyInformationalVersion attributes
-    sed -i -E "s/(\[assembly: ?Assembly(File|Informational)?Version\(\")${old_version}(\"\)\])/\1${new_version_sed}\3/g" "${shared_version_file}"
+    # using a regex that handles each line independently to be more robust
+    sed -i -E "s/(\[assembly: ?Assembly(Version|FileVersion|InformationalVersion)\(\")[0-9\.]+([-a-z0-9]*)(\"\)\])/\1${new_version_sed}\4/g" "${shared_version_file}"
 fi
 
 # update nuget package version

@@ -107,10 +107,14 @@ jobs:
         run: |
           {
             echo 'body<<EOF'
-            for file in jellyfin.dll Jellyfin.Data.dll MediaBrowser.Common.dll MediaBrowser.Controller.dll MediaBrowser.Model.dll Emby.Naming.dll Jellyfin.Extensions.dll Jellyfin.MediaEncoding.Keyframes.dll Jellyfin.Database.Implementations.dll; do
-              COMPAT_OUTPUT="$( { apicompat --left ./abi-base/${file} --right ./abi-head/${file}; } 2>&1 || true )"
-              if [ "APICompat ran successfully without finding any breaking changes." != "${COMPAT_OUTPUT}" ]; then
-                printf "\n%s\n%s\n" "${file}" "${COMPAT_OUTPUT}"
+            for file in jellyfin.dll Jellyfin.Api.dll Jellyfin.Data.dll Jellyfin.Server.Implementations.dll Emby.Server.Implementations.dll MediaBrowser.Common.dll MediaBrowser.Controller.dll MediaBrowser.Model.dll Emby.Naming.dll Jellyfin.Extensions.dll Jellyfin.MediaEncoding.Hls.dll Jellyfin.MediaEncoding.Keyframes.dll Jellyfin.Networking.dll Jellyfin.Drawing.dll Emby.Photos.dll MediaBrowser.MediaEncoding.dll Jellyfin.Database.Implementations.dll; do
+              if [ -f "./abi-base/${file}" ] && [ -f "./abi-head/${file}" ]; then
+                COMPAT_OUTPUT="$( { apicompat --left ./abi-base/${file} --right ./abi-head/${file}; } 2>&1 || true )"
+                if [ "APICompat ran successfully without finding any breaking changes." != "${COMPAT_OUTPUT}" ]; then
+                  printf "\n### %s\n\n\`\`\`\n%s\n\`\`\`\n" "${file}" "${COMPAT_OUTPUT}"
+                fi
+              else
+                printf "\n### %s\n\nSkipped: file not found in one of the artifacts.\n" "${file}"
               fi
             done
             echo EOF
@@ -137,9 +141,7 @@ jobs:
             <details>
             <summary>ABI Difference</summary>
 
-            ```
             ${{ steps.diff.outputs.body }}
-            ```
 
             </details>
 
