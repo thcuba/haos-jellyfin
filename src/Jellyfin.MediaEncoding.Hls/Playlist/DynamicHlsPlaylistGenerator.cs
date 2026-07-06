@@ -30,7 +30,11 @@ public class DynamicHlsPlaylistGenerator : IDynamicHlsPlaylistGenerator
         _extractors = extractors.Where(e => e.IsMetadataBased).ToArray();
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Creates the main playlist.
+    /// </summary>
+    /// <param name="request">The request.</param>
+    /// <returns>The playlist.</returns>
     public string CreateMainPlaylist(CreateMainPlaylistRequest request)
     {
         IReadOnlyList<double> segments;

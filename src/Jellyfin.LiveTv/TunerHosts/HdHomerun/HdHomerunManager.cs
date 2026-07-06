@@ -216,14 +216,14 @@ namespace Jellyfin.LiveTv.TunerHosts.HdHomerun
             }
         }
 
-        internal static int WriteGetMessage(Span<byte> buffer, int tuner, string name)
+        public static int WriteGetMessage(Span<byte> buffer, int tuner, string name)
         {
             var byteName = string.Format(CultureInfo.InvariantCulture, "/tuner{0}/{1}", tuner, name);
             int offset = WriteHeaderAndPayload(buffer, byteName);
             return FinishPacket(buffer, offset);
         }
 
-        internal static int WriteSetMessage(Span<byte> buffer, int tuner, string name, string value, uint? lockkey)
+        public static int WriteSetMessage(Span<byte> buffer, int tuner, string name, string value, uint? lockkey)
         {
             var byteName = string.Format(CultureInfo.InvariantCulture, "/tuner{0}/{1}", tuner, name);
             int offset = WriteHeaderAndPayload(buffer, byteName);
@@ -286,7 +286,7 @@ namespace Jellyfin.LiveTv.TunerHosts.HdHomerun
             return offset + 4;
         }
 
-        internal static bool VerifyReturnValueOfGetSet(ReadOnlySpan<byte> buffer, string expected)
+        public static bool VerifyReturnValueOfGetSet(ReadOnlySpan<byte> buffer, string expected)
         {
             return TryGetReturnValueOfGetSet(buffer, out var value)
                 && string.Equals(Encoding.UTF8.GetString(value), expected, StringComparison.OrdinalIgnoreCase);

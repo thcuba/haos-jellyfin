@@ -9,8 +9,9 @@
     <AssemblyName>jellyfin</AssemblyName>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
-    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <VersionPrefix>12.0.1</VersionPrefix>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <ApplicationIcon>Jellyfin.Server.ico</ApplicationIcon>
   </PropertyGroup>

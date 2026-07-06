@@ -10,7 +10,6 @@ env:
 
 jobs:
   run-tests:
-    if: ${{ contains(github.repository, 'haos-jellyfin') }}
     strategy:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
