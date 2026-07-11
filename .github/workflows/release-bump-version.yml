@@ -18,7 +18,11 @@ jobs:
       - name: Calculate next version
         run: |
           VERSION=$(yq -r '.version' haos-jellyfin/config.yaml)
-          NEXT_VERSION=$(echo "$VERSION" | awk -F. '{$NF = $NF + 1;} OFS="." 1')
+          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+          MINOR=$(echo "$VERSION" | cut -d. -f2)
+          PATCH=$(echo "$VERSION" | cut -d. -f3)
+          NEXT_PATCH=$((PATCH + 1))
+          NEXT_VERSION="${MAJOR}.${MINOR}.${NEXT_PATCH}"
           echo "NEXT_VERSION=$NEXT_VERSION" >> $GITHUB_ENV
 
       - name: Bump version in config files
