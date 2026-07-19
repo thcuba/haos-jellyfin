@@ -25,10 +25,10 @@ jobs:
           NEXT_VERSION="${MAJOR}.${MINOR}.${NEXT_PATCH}"
           echo "NEXT_VERSION=$NEXT_VERSION" >> $GITHUB_ENV
 
-      - name: Bump version in config files
+      - name: Bump version in config and template files
         run: |
-          sed -i "s/^version: .*/version: \"${{ env.NEXT_VERSION }}\"/" haos-jellyfin/config.yaml
-          sed -i "s/^version: .*/version: \"${{ env.NEXT_VERSION }}\"/" haos-jellyfin/addon.yaml 2>/dev/null || true
+          chmod +x bump_version.py
+          ./bump_version.py "${{ env.NEXT_VERSION }}"
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6

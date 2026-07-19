@@ -24,6 +24,9 @@ jobs:
         run: |
           VERSION=$(yq -r '.version' haos-jellyfin/config.yaml)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
+          # Lowercase the repository owner for docker image naming
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "OWNER=$OWNER" >> $GITHUB_ENV
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -45,8 +48,10 @@ jobs:
           platforms: linux/${{ matrix.arch }}
           push: true
           tags: |
-            ghcr.io/thcuba/haos-jellyfin:latest-${{ matrix.arch }}
-            ghcr.io/thcuba/haos-jellyfin:${{ env.VERSION }}-${{ matrix.arch }}
+            ghcr.io/${{ env.OWNER }}/haos-jellyfin:latest-${{ matrix.arch }}
+            ghcr.io/${{ env.OWNER }}/haos-jellyfin:${{ env.VERSION }}-${{ matrix.arch }}
+            ghcr.io/${{ env.OWNER }}/haos-jellyfin-${{ matrix.arch }}:latest
+            ghcr.io/${{ env.OWNER }}/haos-jellyfin-${{ matrix.arch }}:${{ env.VERSION }}
 
       - name: Create Release manifest
         if: github.event_name == 'push' && matrix.arch == 'amd64'
