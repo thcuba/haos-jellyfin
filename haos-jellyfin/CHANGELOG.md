@@ -1,5 +1,8 @@
 # Changelog
 
+## 12.0.5
+- Automated version bump to 12.0.5.
+
 ## 12.0.4
 - Automated version bump to 12.0.4.
 
