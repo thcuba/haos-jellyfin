@@ -1,6 +1,6 @@
 {
   "name": "Jellyfin Media Server",
-  "version": "10.9.0",
+  "version": "10.11.11",
   "slug": "jellyfin",
   "description": "Jellyfin - The Free Software Media Server with Hardware Acceleration (VA-API/Vulkan)",
   "url": "https://github.com/thcuba/haos-jellyfin",
@@ -22,9 +22,9 @@
     "port": 8096
   },
   "schema": {
-    "log_level": "select",
-    "host": "str",
-    "port": "port"
+    "log_level": "list(trace|debug|info|notice|warning|error|fatal)?",
+    "host": "str?",
+    "port": "port?"
   },
   "privileged": ["NET_ADMIN"],
   "homeassistant_api": false,

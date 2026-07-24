@@ -9,7 +9,9 @@ arch:
 map:
   - media:rw
 devices:
-  - /dev/dri
+  - /dev/dri:/dev/dri:rwm
+environment:
+  LIBVA_DRIVER_NAME: iHD
 webui: "http://[HOST]:[PORT:8096]"
 init: false
 image: "ghcr.io/thcuba/haos-jellyfin-{arch}"

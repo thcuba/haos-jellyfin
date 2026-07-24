@@ -1,8 +1,5 @@
 # Changelog
 
-## 10.11.11
-- Automated version bump to 10.11.11.
-
 ## 12.0.5
 - Automated version bump to 12.0.5.
 
@@ -19,6 +16,9 @@
 - Standardized versioning across all components.
 - Updated project to .NET 10.
 - Improved CI/CD workflows for HAOS add-on.
+
+## 10.11.11
+- Automated version bump to 10.11.11.
 
 ## 1.0.0
 - Initial release of Jellyfin HAOS Add-on.
