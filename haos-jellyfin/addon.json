@@ -11,7 +11,7 @@
     "8096/tcp": 8096
   },
   "devices": [
-    "/dev/dri:/dev/dri:rwm"
+    "/dev/dri"
   ],
   "environment": {
     "LIBVA_DRIVER_NAME": "iHD"

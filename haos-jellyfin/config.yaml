@@ -9,7 +9,7 @@ arch:
 map:
   - media:rw
 devices:
-  - /dev/dri:/dev/dri:rwm
+  - /dev/dri
 environment:
   LIBVA_DRIVER_NAME: iHD
 webui: "http://[HOST]:[PORT:8096]"
