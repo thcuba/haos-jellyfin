@@ -36,6 +36,36 @@ def main():
             f.write(new_content)
         print(f"Updated {addon_path}")
 
+    # 2b. Update haos-jellyfin/addon.json if exists
+    addon_json_path = "haos-jellyfin/addon.json"
+    if os.path.exists(addon_json_path):
+        with open(addon_json_path, "r") as f:
+            content = f.read()
+        new_content = re.sub(r'^(\s*"version":\s*)"?[0-9.]+"?', f'\\1"{new_version}"', content, flags=re.MULTILINE)
+        with open(addon_json_path, "w") as f:
+            f.write(new_content)
+        print(f"Updated {addon_json_path}")
+
+    # 2c. Update haos-jellyfin/manifest.json if exists
+    manifest_json_path = "haos-jellyfin/manifest.json"
+    if os.path.exists(manifest_json_path):
+        with open(manifest_json_path, "r") as f:
+            content = f.read()
+        new_content = re.sub(r'^(\s*"version":\s*)"?[0-9.]+"?', f'\\1"{new_version}"', content, flags=re.MULTILINE)
+        with open(manifest_json_path, "w") as f:
+            f.write(new_content)
+        print(f"Updated {manifest_json_path}")
+
+    # 2d. Update haos-jellyfin/Dockerfile if exists
+    dockerfile_path = "haos-jellyfin/Dockerfile"
+    if os.path.exists(dockerfile_path):
+        with open(dockerfile_path, "r") as f:
+            content = f.read()
+        new_content = re.sub(r'^(FROM\s+linuxserver/jellyfin:)[0-9.]+', f'\\1{new_version}', content, flags=re.MULTILINE)
+        with open(dockerfile_path, "w") as f:
+            f.write(new_content)
+        print(f"Updated {dockerfile_path}")
+
     # 3. Update haos-jellyfin/CHANGELOG.md
     changelog_path = "haos-jellyfin/CHANGELOG.md"
     if os.path.exists(changelog_path):
