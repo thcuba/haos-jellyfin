@@ -21,7 +21,7 @@ def main():
         with open(config_path, "r") as f:
             content = f.read()
         # Find version: "..." or version: ...
-        new_content = re.sub(r'^(version:\s*)"?[0-9.]+"?', f'\\1"{new_version}"', content, flags=re.MULTILINE)
+        new_content = re.sub(r'^(version:\s*)"?[0-9.]+"?', lambda m: f'{m.group(1)}"{new_version}"', content, flags=re.MULTILINE)
         with open(config_path, "w") as f:
             f.write(new_content)
         print(f"Updated {config_path}")
@@ -31,7 +31,7 @@ def main():
     if os.path.exists(addon_path):
         with open(addon_path, "r") as f:
             content = f.read()
-        new_content = re.sub(r'^(version:\s*)"?[0-9.]+"?', f'\\1"{new_version}"', content, flags=re.MULTILINE)
+        new_content = re.sub(r'^(version:\s*)"?[0-9.]+"?', lambda m: f'{m.group(1)}"{new_version}"', content, flags=re.MULTILINE)
         with open(addon_path, "w") as f:
             f.write(new_content)
         print(f"Updated {addon_path}")
@@ -41,7 +41,7 @@ def main():
     if os.path.exists(addon_json_path):
         with open(addon_json_path, "r") as f:
             content = f.read()
-        new_content = re.sub(r'^(\s*"version":\s*)"?[0-9.]+"?', f'\\1"{new_version}"', content, flags=re.MULTILINE)
+        new_content = re.sub(r'^(\s*"version":\s*)"?[0-9.]+"?', lambda m: f'{m.group(1)}"{new_version}"', content, flags=re.MULTILINE)
         with open(addon_json_path, "w") as f:
             f.write(new_content)
         print(f"Updated {addon_json_path}")
@@ -51,7 +51,7 @@ def main():
     if os.path.exists(manifest_json_path):
         with open(manifest_json_path, "r") as f:
             content = f.read()
-        new_content = re.sub(r'^(\s*"version":\s*)"?[0-9.]+"?', f'\\1"{new_version}"', content, flags=re.MULTILINE)
+        new_content = re.sub(r'^(\s*"version":\s*)"?[0-9.]+"?', lambda m: f'{m.group(1)}"{new_version}"', content, flags=re.MULTILINE)
         with open(manifest_json_path, "w") as f:
             f.write(new_content)
         print(f"Updated {manifest_json_path}")
@@ -61,7 +61,7 @@ def main():
     if os.path.exists(dockerfile_path):
         with open(dockerfile_path, "r") as f:
             content = f.read()
-        new_content = re.sub(r'^(FROM\s+linuxserver/jellyfin:)[0-9.]+', f'\\1{new_version}', content, flags=re.MULTILINE)
+        new_content = re.sub(r'^(FROM\s+linuxserver/jellyfin:)[0-9.]+', lambda m: m.group(1) + new_version, content, flags=re.MULTILINE)
         with open(dockerfile_path, "w") as f:
             f.write(new_content)
         print(f"Updated {dockerfile_path}")
