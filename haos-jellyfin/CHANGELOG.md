@@ -1,5 +1,8 @@
 # Changelog
 
+## 10.11.11
+- Automated version bump to 10.11.11.
+
 ## 10.11.12
 - Automated version bump to 10.11.12.
 
