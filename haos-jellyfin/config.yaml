@@ -11,6 +11,7 @@ map:
 devices:
   - /dev/dri
   - /dev/shm
+video: true
 environment:
   LIBVA_DRIVER_NAME: iHD
 webui: "http://[HOST]:[PORT:8096]"
