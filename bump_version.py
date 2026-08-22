@@ -61,10 +61,20 @@ def main():
     if os.path.exists(dockerfile_path):
         with open(dockerfile_path, "r") as f:
             content = f.read()
-        new_content = re.sub(r'^(FROM\s+linuxserver/jellyfin:)[0-9.]+', lambda m: m.group(1) + new_version, content, flags=re.MULTILINE)
+        new_content = re.sub(r'(linuxserver/jellyfin:)[0-9.]+', lambda m: m.group(1) + new_version, content)
         with open(dockerfile_path, "w") as f:
             f.write(new_content)
         print(f"Updated {dockerfile_path}")
+
+    # 2e. Update haos-jellyfin/build.yaml if exists
+    build_yaml_path = "haos-jellyfin/build.yaml"
+    if os.path.exists(build_yaml_path):
+        with open(build_yaml_path, "r") as f:
+            content = f.read()
+        new_content = re.sub(r'(linuxserver/jellyfin:)[0-9.]+', lambda m: m.group(1) + new_version, content)
+        with open(build_yaml_path, "w") as f:
+            f.write(new_content)
+        print(f"Updated {build_yaml_path}")
 
     # 3. Update haos-jellyfin/CHANGELOG.md
     changelog_path = "haos-jellyfin/CHANGELOG.md"
