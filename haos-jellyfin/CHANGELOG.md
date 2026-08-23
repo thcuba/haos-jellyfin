@@ -1,13 +1,11 @@
 # Changelog
 
+## 12.0.5
+- Updated release candidate add-on for Home Assistant OS (HAOS v12.0.5).
+- Hardware acceleration support (VA-API & Vulkan).
+
 ## 10.11.11
 - Automated version bump to 10.11.11.
-
-## 10.11.12
-- Automated version bump to 10.11.12.
-
-## 12.0.5
-- Automated version bump to 12.0.5.
 
 ## 12.0.4
 - Automated version bump to 12.0.4.

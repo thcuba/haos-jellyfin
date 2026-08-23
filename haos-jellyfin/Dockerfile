@@ -1,7 +1,6 @@
 # Jellyfin for HAOS with Hardware Acceleration Support
-# Base image: linuxserver/jellyfin (highly optimized)
-# Pinned to specific version for reproducibility
-FROM linuxserver/jellyfin:10.11.11
+# Base image: official jellyfin/jellyfin 12.0-rc5
+FROM jellyfin/jellyfin:12.0-rc5
 
 # Install additional tools and hardware acceleration drivers
 # mesa-vulkan-drivers: Support for Vulkan (AMD/Intel)
