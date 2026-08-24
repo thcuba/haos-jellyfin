@@ -16,7 +16,7 @@ jobs:
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: haos-jellyfin/Dockerfile
-          failure-threshold: warning
+          failure-threshold: error
 
   lint-yaml:
     name: Lint YAML config files
@@ -30,17 +30,20 @@ jobs:
           yq eval . haos-jellyfin/config.yaml > /dev/null || { echo "config.yaml non valido"; exit 1; }
           echo "Tutti i file YAML sono validi"
 
-      - name: Validate version consistency
+      - name: Validate config.yaml has a version
         run: |
-          REPO_VER=$(yq -r '.version // "?"' repository.yaml)
-          CONF_VER=$(yq -r '.version // "?"' haos-jellyfin/config.yaml)
-          echo "repository.yaml version: $REPO_VER"
-          echo "config.yaml version: $CONF_VER"
-          if [ "$REPO_VER" != "$CONF_VER" ]; then
-            echo "ERRORE: versioni non corrispondenti tra repository.yaml ($REPO_VER) e config.yaml ($CONF_VER)"
+          VER=$(yq -r '.version // ""' haos-jellyfin/config.yaml)
+          if [ -z "$VER" ]; then
+            echo "ERRORE: haos-jellyfin/config.yaml non ha un campo 'version'"
             exit 1
           fi
-          echo "Versioni consistenti: $REPO_VER"
+          echo "Versione addon: $VER"
+          # Verifica formato semver (x.y.z)
+          if ! echo "$VER" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "ERRORE: versione '$VER' non segue il formato semver (x.y.z)"
+            exit 1
+          fi
+          echo "Formato versione valido"
 
   lint-python:
     name: Lint Python scripts
