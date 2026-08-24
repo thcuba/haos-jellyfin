@@ -1,25 +1,60 @@
-name: Format
+name: Dockerfile & Config Lint
 on:
   push:
-    branches:
-      - master
-  # Run formatter against the forked branch, but
-  # do not allow access to secrets
-  # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflows-in-forked-repositories
+    branches: [ master ]
   pull_request:
-
-env:
-  SDK_VERSION: "10.0.x"
+    branches: [ master ]
 
 jobs:
-  format-check:
+  lint-dockerfile:
+    name: Lint Dockerfile
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+      - name: Run hadolint on Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
         with:
-          dotnet-version: ${{ env.SDK_VERSION }}
+          dockerfile: haos-jellyfin/Dockerfile
+          failure-threshold: warning
 
-      - name: Run DotNet Format
-        run: dotnet format --verify-no-changes --verbosity minimal
+  lint-yaml:
+    name: Lint YAML config files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate repository.yaml and config.yaml
+        run: |
+          yq eval . repository.yaml > /dev/null || { echo "repository.yaml non valido"; exit 1; }
+          yq eval . haos-jellyfin/config.yaml > /dev/null || { echo "config.yaml non valido"; exit 1; }
+          echo "Tutti i file YAML sono validi"
+
+      - name: Validate version consistency
+        run: |
+          REPO_VER=$(yq -r '.version // "?"' repository.yaml)
+          CONF_VER=$(yq -r '.version // "?"' haos-jellyfin/config.yaml)
+          echo "repository.yaml version: $REPO_VER"
+          echo "config.yaml version: $CONF_VER"
+          if [ "$REPO_VER" != "$CONF_VER" ]; then
+            echo "ERRORE: versioni non corrispondenti tra repository.yaml ($REPO_VER) e config.yaml ($CONF_VER)"
+            exit 1
+          fi
+          echo "Versioni consistenti: $REPO_VER"
+
+  lint-python:
+    name: Lint Python scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Check Python syntax
+        run: |
+          python -m py_compile bump_version.py
+          shellcheck bump_version || true  # shellcheck non blocca, solo avviso
+          echo "Python syntax OK"

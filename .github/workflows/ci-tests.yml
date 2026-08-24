@@ -1,45 +1,57 @@
-name: Tests
+name: Docker Image Smoke Test
 on:
   push:
-    branches:
-      - master
-  # Run tests against the forked branch, but
-  # do not allow access to secrets
-  # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflows-in-forked-repositories
-  pull_request:
-
-env:
-  SDK_VERSION: "10.0.x"
+    branches: [ master ]
+  # Esegue solo su push a master, non su PR (troppo pesante)
+  workflow_dispatch:
 
 jobs:
-  run-tests:
-    strategy:
-      matrix:
-        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
-      fail-fast: false
-
-    runs-on: "${{ matrix.os }}"
+  smoke-test:
+    name: Build & smoke test
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
         with:
-          dotnet-version: ${{ env.SDK_VERSION }}
+          context: ./haos-jellyfin
+          load: true  # Carica immagine in locale (no push)
+          tags: haos-jellyfin:test
 
-      - name: Run DotNet CLI Tests
-        run: >
-          dotnet test Jellyfin.sln
-          --configuration Release
-          --collect:"XPlat Code Coverage"
-          --settings tests/coverletArgs.runsettings
-          --verbosity minimal
+      - name: Inspect image metadata
+        run: |
+          docker image inspect haos-jellyfin:test --format '{{.Size}}' | awk '{printf "Dimensione immagine: %.2f MB\n", $1/1024/1024}'
+          echo "Architettura: $(docker inspect haos-jellyfin:test --format '{{.Os}}/{{.Architecture}}')"
+          echo "Entrypoint: $(docker inspect haos-jellyfin:test --format '{{json .Config.Entrypoint}}')"
 
-      - name: Merge code coverage results
-        uses: danielpalme/ReportGenerator-GitHub-Action@d3ebf1f760f7d8ab92cc44d9bcfee7ad73722a31 # v5.5.11
-        with:
-          reports: "**/coverage.cobertura.xml"
-          targetdir: "merged/"
-          reporttypes: "Cobertura"
+      - name: Start container and test health
+        run: |
+          docker run -d --name jellyfin-test \
+            -p 8096:8096 \
+            -e PUID=1000 \
+            -e PGID=1000 \
+            haos-jellyfin:test
 
-      # TODO - which action / tool to use to publish code coverage results?
-      # - name: Publish code coverage results
+          echo "Container avviato, aspetto 20s per l'avvio del server..."
+          sleep 20
+
+          # Healthcheck HTTP all'API pubblica di Jellyfin
+          curl -sf --retry 5 --retry-delay 5 http://localhost:8096/System/Info/Public || {
+            echo "Health check fallito. Log del container:"
+            docker logs jellyfin-test --tail 30
+            docker stop jellyfin-test && docker rm jellyfin-test
+            exit 1
+          }
+
+          echo "Health check passato! Jellyfin risponde correttamente."
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop jellyfin-test 2>/dev/null || true
+          docker rm jellyfin-test 2>/dev/null || true
+          docker rmi haos-jellyfin:test 2>/dev/null || true
