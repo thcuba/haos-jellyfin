@@ -1,7 +1,0 @@
-name: OpenAPI Publish
-on: workflow_dispatch
-jobs:
-  empty:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "placeholder"
