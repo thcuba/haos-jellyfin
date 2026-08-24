@@ -1,5 +1,8 @@
 name: OpenAPI Report
-on: workflow_dispatch
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
 jobs:
   empty:
     runs-on: ubuntu-latest
