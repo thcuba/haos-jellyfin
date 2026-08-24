@@ -1,7 +1,0 @@
-name: Project Automation
-on: workflow_dispatch
-jobs:
-  empty:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "placeholder"
