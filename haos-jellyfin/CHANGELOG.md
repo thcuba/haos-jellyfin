@@ -1,5 +1,8 @@
 # Changelog
 
+## 12.0.0-rc4
+- Automated version bump to 12.0.0-rc4.
+
 ## 10.11.11
 - Automated version bump to 10.11.11.
 
