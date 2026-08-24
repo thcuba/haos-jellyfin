@@ -1,4 +1,4 @@
-name: OpenAPI Publish
+name: OpenAPI Publish v2
 on:
   push:
     branches: [ master ]
