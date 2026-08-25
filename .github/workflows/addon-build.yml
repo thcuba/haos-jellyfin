@@ -53,13 +53,6 @@ jobs:
             ghcr.io/${{ env.OWNER }}/haos-jellyfin-${{ matrix.arch }}:latest
             ghcr.io/${{ env.OWNER }}/haos-jellyfin-${{ matrix.arch }}:${{ env.VERSION }}
 
-      - name: Create Release manifest
-        if: github.event_name == 'push' && matrix.arch == 'amd64'
-        run: |
-          mkdir -p /tmp/release
-          yq -r '.version' haos-jellyfin/config.yaml > /tmp/release/version.txt
-          echo "haos-jellyfin" > /tmp/release/addon_name.txt
-
       - name: Create Release
         if: github.event_name == 'push' && matrix.arch == 'amd64'
         uses: softprops/action-gh-release@v2
