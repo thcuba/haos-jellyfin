@@ -14,7 +14,8 @@ devices:
   - /dev/shm
 video: true
 environment:
-  LIBVA_DRIVER_NAME: iHD
+  # VA-API driver is auto-detected by libva (iHD on Intel, radeonsi on AMD,
+  # none on ARM). Do NOT force iHD: it breaks AMD and aarch64 transcoding.
   # Persist Jellyfin config/data on HAOS `/share` (mapped share:rw below)
   # The linuxserver/jellyfin base image writes to /config by default;
   # redirect it to the persistent HAOS /share mount so data survives restarts.

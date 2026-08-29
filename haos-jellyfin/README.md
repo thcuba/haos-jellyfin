@@ -11,8 +11,13 @@ Jellyfin is a Free Software Media System that puts you in control of managing an
 
 ## Hardware Acceleration
 
-### Intel VA-API (default)
-Intel GPUs are detected automatically via `/dev/dri`. VA-API is enabled by default.
+### VA-API (Intel and AMD)
+GPUs are auto-detected via `/dev/dri`. The VA-API driver is chosen automatically
+by libva (Intel `iHD`, AMD `radeonsi`).
+
+### ARM / aarch64
+On aarch64 (e.g. Raspberry Pi) hardware transcoding depends on the CPU's support;
+the add-on runs fine, but GPU transcoding may be unavailable on some SBCs.
 
 ### Persistent storage
 Jellyfin config, data, cache, and logs are persisted on the HAOS `/share/jellyfin`
