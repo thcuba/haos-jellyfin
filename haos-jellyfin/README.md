@@ -19,12 +19,6 @@ Jellyfin config, data, cache, and logs are persisted on the HAOS `/share/jellyfi
 directory (mapped `share:rw`), so your library, users, and settings survive add-on
 restarts, updates, and re-installs.
 
-### Additional options
-Available in the add-on configuration:
-- `log_level`: debug, info, notice, warning, error, fatal
-- `host`: listen address (default: 0.0.0.0)
-- `port`: listen port (default: 8096)
-
 ## Architecture
 - amd64
 - aarch64
