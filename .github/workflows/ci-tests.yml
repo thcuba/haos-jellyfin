@@ -34,16 +34,21 @@ jobs:
       - name: Verify image structure
         run: |
           echo "=== VERIFICA STRUTTURA ==="
-          # Verifica che i file chiave esistano nell'immagine
+          # Ogni verifica fallisce il job (set -e) se il binario è assente,
+          # così lo smoke test è realmente bloccante.
+          set -e
+
           docker run --rm --entrypoint ls haos-jellyfin:test /usr/lib/jellyfin/bin/jellyfin > /dev/null 2>&1 && \
-            echo "✅ Jellyfin binario presente" || echo "❌ Jellyfin binario assente"
+            echo "✅ Jellyfin binario presente" || { echo "❌ Jellyfin binario assente"; exit 1; }
 
           docker run --rm --entrypoint ls haos-jellyfin:test /usr/lib/jellyfin-ffmpeg/ffmpeg > /dev/null 2>&1 && \
-            echo "✅ FFmpeg presente" || echo "❌ FFmpeg assente"
+            echo "✅ FFmpeg presente" || { echo "❌ FFmpeg assente"; exit 1; }
 
-          docker run --rm --entrypoint sh haos-jellyfin:test -c "jq --version > /dev/null 2>&1 && echo '✅ jq installato' || echo '❌ jq assente'"
+          docker run --rm --entrypoint sh haos-jellyfin:test -c "jq --version > /dev/null 2>&1" && \
+            echo "✅ jq installato" || { echo "❌ jq assente"; exit 1; }
 
-          docker run --rm --entrypoint sh haos-jellyfin:test -c "curl --version > /dev/null 2>&1 && echo '✅ curl installato' || echo '❌ curl assente'"
+          docker run --rm --entrypoint sh haos-jellyfin:test -c "curl --version > /dev/null 2>&1" && \
+            echo "✅ curl installato" || { echo "❌ curl assente"; exit 1; }
 
       - name: Verify layer count and size
         run: |

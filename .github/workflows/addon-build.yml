@@ -48,8 +48,6 @@ jobs:
           platforms: linux/${{ matrix.arch }}
           push: true
           tags: |
-            ghcr.io/${{ env.OWNER }}/haos-jellyfin:latest-${{ matrix.arch }}
-            ghcr.io/${{ env.OWNER }}/haos-jellyfin:${{ env.VERSION }}-${{ matrix.arch }}
             ghcr.io/${{ env.OWNER }}/haos-jellyfin-${{ matrix.arch }}:latest
             ghcr.io/${{ env.OWNER }}/haos-jellyfin-${{ matrix.arch }}:${{ env.VERSION }}
 
