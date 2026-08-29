@@ -1,8 +1,10 @@
 name: Bump Version
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 0 1 * *'  # Monthly on the 1st
+  # NOTE: il bump NON è schedulato perché la versione dell'add-on è vincolata
+  # alla release upstream linuxserver/jellyfin (vedi build.yaml / Dockerfile).
+  # Un bump automatico a X.Y.(Z+1) punterebbe a un'immagine upstream inesistente
+  # e romperebbe il build. Bump manuale solo quando esce una nuova Jellyfin.
 
 jobs:
   bump-version:
