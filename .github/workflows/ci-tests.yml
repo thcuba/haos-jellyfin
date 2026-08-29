@@ -38,7 +38,7 @@ jobs:
           # così lo smoke test è realmente bloccante.
           set -e
 
-          docker run --rm --entrypoint ls haos-jellyfin:test /usr/lib/jellyfin/bin/jellyfin > /dev/null 2>&1 && \
+          docker run --rm --entrypoint ls haos-jellyfin:test /jellyfin/jellyfin > /dev/null 2>&1 && \
             echo "✅ Jellyfin binario presente" || { echo "❌ Jellyfin binario assente"; exit 1; }
 
           docker run --rm --entrypoint ls haos-jellyfin:test /usr/lib/jellyfin-ffmpeg/ffmpeg > /dev/null 2>&1 && \
