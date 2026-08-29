@@ -1,7 +1,6 @@
 # Jellyfin for HAOS with Hardware Acceleration Support
-# Base image: linuxserver/jellyfin (highly optimized)
-# Pinned to specific version for reproducibility
-ARG BUILD_FROM=linuxserver/jellyfin:10.11.11
+# Base image: official jellyfin/jellyfin 12.0-rc6
+ARG BUILD_FROM=jellyfin/jellyfin:12.0-rc6
 FROM ${BUILD_FROM}
 
 # Install additional tools and hardware acceleration drivers
@@ -21,6 +20,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # radeonsi on AMD, none on ARM). Do NOT force a single driver so that
 # amd64 (Intel/AMD) and aarch64 all work correctly.
 
+# The official jellyfin/jellyfin base image hard-codes `--datadir /config`
+# in its ENTRYPOINT, which would ignore our persistent /share paths.
+# Override the ENTRYPOINT with no hard-coded paths so that the JELLYFIN_*_DIR
+# environment variables (set in config.yaml to /share/jellyfin/...) are honored.
+# This keeps config/data/cache/log persistent across restarts.
+ENTRYPOINT ["/jellyfin/jellyfin"]
+
 # Create render group if not exists and ensure jellyfin user has permissions for GPU access
 RUN getent group render >/dev/null 2>&1 || groupadd -r render && \
     usermod -a -G video,render jellyfin
@@ -31,6 +37,3 @@ EXPOSE 8096
 # Health check using Jellyfin's public API endpoint
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f --silent http://localhost:8096/System/Info/Public || exit 1
-
-# Run jellyfin with proper settings
-CMD ["/init"]
