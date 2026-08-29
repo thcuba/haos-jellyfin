@@ -28,8 +28,7 @@ RUN apt-get update \
             && apt-get update \
             && apt-get install -y --no-install-recommends \
                 intel-media-va-driver-non-free \
-                mesa-va-drivers \
-                libvdpau-va-gl; \
+                mesa-va-drivers; \
         fi \
     && if [ "$TARGETARCH" = "arm64" ]; then \
         apt-get install -y --no-install-recommends \
