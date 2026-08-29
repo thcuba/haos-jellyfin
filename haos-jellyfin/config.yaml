@@ -8,12 +8,20 @@ arch:
   - aarch64
 map:
   - media:rw
+  - share:rw
 devices:
   - /dev/dri
   - /dev/shm
 video: true
 environment:
   LIBVA_DRIVER_NAME: iHD
+  # Persist Jellyfin config/data on HAOS `/share` (mapped share:rw below)
+  # The linuxserver/jellyfin base image writes to /config by default;
+  # redirect it to the persistent HAOS /share mount so data survives restarts.
+  JELLYFIN_CONFIG_DIR: /share/jellyfin/config
+  JELLYFIN_DATA_DIR: /share/jellyfin/data
+  JELLYFIN_CACHE_DIR: /share/jellyfin/cache
+  JELLYFIN_LOG_DIR: /share/jellyfin/log
 webui: "http://[HOST]:[PORT:8096]"
 init: false
 image: "ghcr.io/thcuba/haos-jellyfin-{arch}"

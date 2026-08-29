@@ -14,6 +14,11 @@ Jellyfin is a Free Software Media System that puts you in control of managing an
 ### Intel VA-API (default)
 Intel GPUs are detected automatically via `/dev/dri`. VA-API is enabled by default.
 
+### Persistent storage
+Jellyfin config, data, cache, and logs are persisted on the HAOS `/share/jellyfin`
+directory (mapped `share:rw`), so your library, users, and settings survive add-on
+restarts, updates, and re-installs.
+
 ### Additional options
 Available in the add-on configuration:
 - `log_level`: debug, info, notice, warning, error, fatal
