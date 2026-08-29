@@ -27,10 +27,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # This keeps config/data/cache/log persistent across restarts.
 ENTRYPOINT ["/jellyfin/jellyfin"]
 
-# Create render group if not exists and ensure jellyfin user has permissions for GPU access
-RUN getent group render >/dev/null 2>&1 || groupadd -r render && \
-    usermod -a -G video,render jellyfin
-
 # Expose Jellyfin port
 EXPOSE 8096
 
