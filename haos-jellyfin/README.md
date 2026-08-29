@@ -9,6 +9,11 @@ Jellyfin is a Free Software Media System that puts you in control of managing an
 3. Click "Install" and then "Start"
 4. Open the Web UI from the add-on page
 
+## Version
+
+This add-on ships **Jellyfin 12.0 RC6** (preview release), built from the official `jellyfin/jellyfin` image.
+A release candidate is intended for testing before the final 12.0 public release.
+
 ## Hardware Acceleration
 
 ### VA-API (Intel and AMD)

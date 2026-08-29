@@ -1,5 +1,5 @@
 ---
 # https://developers.home-assistant.io/docs/addon_builder/
 build_from:
-  amd64: linuxserver/jellyfin:10.11.11
-  aarch64: linuxserver/jellyfin:10.11.11
+  amd64: jellyfin/jellyfin:12.0-rc6
+  aarch64: jellyfin/jellyfin:12.0-rc6

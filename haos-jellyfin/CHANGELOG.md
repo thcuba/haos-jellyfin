@@ -1,5 +1,12 @@
 # Changelog
 
+## 12.0.6
+- Upgraded Jellyfin media server to upstream **12.0-rc6** (preview), switching the base image from `linuxserver/jellyfin` to the official `jellyfin/jellyfin`.
+- Moved add-on versioning to the `12.0.x` scheme used for release candidates (RC6 = 12.0.6).
+- Persist Jellyfin config/data/cache/log on HAOS `/share/jellyfin` so library, users, and settings survive restarts, updates, and re-installs. The Dockerfile now overrides the official image ENTRYPOINT so the `JELLYFIN_*_DIR` variables are honored.
+- Auto-detect VA-API driver (iHD on Intel, radeonsi on AMD) instead of forcing iHD (fix #473).
+- Fixed/removed dead add-on options and redundant image tags (fix #474, #476).
+
 ## 10.11.11
 - Aligned Jellyfin media server to upstream stable version 10.11.11.
 - Enabled native GPU hardware acceleration support via the `video: true` declaration to ensure seamless transcoding under Home Assistant OS (HAOS).
