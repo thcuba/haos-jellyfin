@@ -13,7 +13,9 @@ ARG TARGETARCH
 # Here we add the vendor userspace drivers that jellyfin-ffmpeg loads via VA-API:
 #   - amd64 (Intel)  : intel-media-va-driver-non-free  -> iHD driver (QSV/VA-API)
 #   - amd64 (AMD)    : mesa-va-drivers                 -> radeonsi driver
-#   - arm64 (ARM/RPi): libva-driver-v4l2-extra         -> V4L2 VA-API driver
+#   - arm64 (ARM/RPi): none extra needed; VA-API goes through the V4L2/stateless
+#                      kernel drivers, whose userspace support ships in the base
+#                      image via mesa-va-drivers.
 # The apt non-free component is enabled on-demand for the Intel driver.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -29,11 +31,7 @@ RUN apt-get update \
             && apt-get install -y --no-install-recommends \
                 intel-media-va-driver-non-free \
                 mesa-va-drivers; \
-        fi \
-    && if [ "$TARGETARCH" = "arm64" ]; then \
-        apt-get install -y --no-install-recommends \
-            libva-driver-v4l2-extra; \
-        fi \
+    fi \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # VA-API driver is auto-detected by libva at runtime (iHD on Intel,

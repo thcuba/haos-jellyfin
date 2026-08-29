@@ -32,7 +32,7 @@ NVIDIA in Docker works through the **host**, not the container:
 The add-on maps `/dev/nvidia*` and sets `NVIDIA_VISIBLE_DEVICES=all` + `NVIDIA_DRIVER_CAPABILITIES=compute,video,utility`. No container-side driver is installed (NVIDIA kernel modules cannot be bundled in the image).
 
 ### ARM / aarch64
-On aarch64 (e.g. Raspberry Pi) the add-on bundles `libva-driver-v4l2-extra` for VA-API via V4L2. Support depends on the CPU/SBC — hardware transcoding may be limited or unavailable on some boards.
+On aarch64 (e.g. Raspberry Pi) VA-API goes through the V4L2/stateless kernel drivers; the userspace support is already provided by `mesa-va-drivers` shipped in the base image. Hardware transcoding depends on the CPU/SBC — support may be limited or unavailable on some boards.
 
 ### Persistent storage
 Jellyfin config, data, cache, and logs are persisted on the HAOS `/share/jellyfin`
