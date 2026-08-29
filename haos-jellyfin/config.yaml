@@ -11,7 +11,14 @@ map:
   - share:rw
 devices:
   - /dev/dri
+  - /dev/dri/renderD128
   - /dev/shm
+  # NVIDIA passthrough (requires NVIDIA proprietary driver + container toolkit on the host)
+  - /dev/nvidiactl
+  - /dev/nvidia0
+  - /dev/nvidia-modeset
+  - /dev/nvidia-uvm
+  - /dev/nvidia-uvm-tools
 video: true
 environment:
   # VA-API driver is auto-detected by libva (iHD on Intel, radeonsi on AMD,
