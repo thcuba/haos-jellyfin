@@ -27,11 +27,3 @@ init: false
 image: "ghcr.io/thcuba/haos-jellyfin-{arch}"
 ports:
   8096/tcp: 8096
-options:
-  log_level: info
-  host: "0.0.0.0"
-  port: 8096
-schema:
-  log_level: list(trace|debug|info|notice|warning|error|fatal)?
-  host: str?
-  port: port?
