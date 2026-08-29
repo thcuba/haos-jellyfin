@@ -17,9 +17,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libvulkan1 \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Intel hardware acceleration: use intel-media-driver (iHD) when present
-# Fallback to i965/legacy if iHD is unavailable
-ENV LIBVA_DRIVER_NAME=iHD
+# VA-API driver is auto-detected by libva at runtime (iHD on Intel,
+# radeonsi on AMD, none on ARM). Do NOT force a single driver so that
+# amd64 (Intel/AMD) and aarch64 all work correctly.
 
 # Create render group if not exists and ensure jellyfin user has permissions for GPU access
 RUN getent group render >/dev/null 2>&1 || groupadd -r render && \
