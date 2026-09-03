@@ -1,5 +1,8 @@
 # Changelog
 
+## 12.0.7
+- Upgraded Jellyfin media server to upstream **12.0-rc7** (preview) built from the official `jellyfin/jellyfin` image.
+
 ## 12.0.6
 - Upgraded Jellyfin media server to upstream **12.0-rc6** (preview), switching the base image from `linuxserver/jellyfin` to the official `jellyfin/jellyfin`.
 - Moved add-on versioning to the `12.0.x` scheme used for release candidates (RC6 = 12.0.6).
