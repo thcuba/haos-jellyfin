@@ -1,6 +1,6 @@
 # Jellyfin for HAOS with Hardware Acceleration Support
-# Base image: official jellyfin/jellyfin 12.0-rc7
-ARG BUILD_FROM=jellyfin/jellyfin:12.0-rc7
+# Base image: official jellyfin/jellyfin 12.0 (stable)
+ARG BUILD_FROM=jellyfin/jellyfin:12.0
 FROM ${BUILD_FROM}
 
 # Build-time arch target (amd64 | arm64) used to install per-arch GPU drivers.
