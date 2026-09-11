@@ -13,15 +13,32 @@ namespace Emby.Naming.Book
         private const string YearMatchGroup = "year";
         private const string SeriesNameMatchGroup = "seriesName";
 
+        // Performance optimization: Use C# 11 source-generated regexes instead of instantiating uncompiled Regex objects
+        // at runtime to eliminate allocation overhead and improve matching throughput.
+        [GeneratedRegex(@"^(?<seriesName>.+?)((\s\((?<seriesYear>[0-9]{4})\))?)\s#(?<index>[0-9]+)(?:\.0)?((\s\(of\s(?<count>[0-9]+)\))?)((\s\((?<year>[0-9]{4})\))?)$")]
+        private static partial Regex SeriesIndexYearRegex();
+
+        [GeneratedRegex(@"^(?<name>.+?)\s\((?<seriesName>.+?),\s#(?<index>[0-9]+)\)(?:\.0)?((\s\((?<year>[0-9]{4})\))?)$")]
+        private static partial Regex NameSeriesIndexRegex();
+
+        [GeneratedRegex(@"^(?<index>[0-9]+)(?:\.0)?\s\-\s(?<name>.+?)((\s\((?<year>[0-9]{4})\))?)$")]
+        private static partial Regex IndexNameRegex();
+
+        [GeneratedRegex(@"(?<name>.*)\((?<year>[0-9]{4})\)")]
+        private static partial Regex NameYearRegex();
+
+        [GeneratedRegex(@"(?<name>.*)")]
+        private static partial Regex CatchAllNameRegex();
+
         private static readonly Regex[] _nameMatches =
         [
             // seriesName (seriesYear) #index (of count) (year) where only seriesName and index are required
-            new Regex(@"^(?<seriesName>.+?)((\s\((?<seriesYear>[0-9]{4})\))?)\s#(?<index>[0-9]+)(?:\.0)?((\s\(of\s(?<count>[0-9]+)\))?)((\s\((?<year>[0-9]{4})\))?)$"),
-            new Regex(@"^(?<name>.+?)\s\((?<seriesName>.+?),\s#(?<index>[0-9]+)\)(?:\.0)?((\s\((?<year>[0-9]{4})\))?)$"),
-            new Regex(@"^(?<index>[0-9]+)(?:\.0)?\s\-\s(?<name>.+?)((\s\((?<year>[0-9]{4})\))?)$"),
-            new Regex(@"(?<name>.*)\((?<year>[0-9]{4})\)"),
+            SeriesIndexYearRegex(),
+            NameSeriesIndexRegex(),
+            IndexNameRegex(),
+            NameYearRegex(),
             // last resort matches the whole string as the name
-            new Regex(@"(?<name>.*)")
+            CatchAllNameRegex()
         ];
 
         [GeneratedRegex(@"^(?<name>.+?)(\sv(?<volume>[0-9]+))?(\sc(?<chapter>[0-9]+))?$")]
