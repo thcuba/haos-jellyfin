@@ -272,34 +272,63 @@ namespace Emby.Naming.Video
         {
             if (videos.Count > 1)
             {
-                var groups = videos
-                    .Select(x => (filename: x.Files[0].FileNameWithoutExtension.ToString(), value: x))
-                    .Select(x => (x.filename, resolutionMatch: ResolutionRegex().Match(x.filename), x.value))
-                    .GroupBy(x => x.resolutionMatch.Success)
-                    .ToList();
+                // Bolt performance optimization: Avoid multiple LINQ passes (Select, GroupBy, OrderBy, ThenBy, InsertRange).
+                // Single-pass categorization into items with resolution match vs without resolution match,
+                // followed by in-place sorting using _numericOrdinalComparer to eliminate allocations and LINQ overhead.
+                var withRes = new List<(string Filename, string ResValue, VideoInfo Video)>(videos.Count);
+                var withoutRes = new List<(string Filename, VideoInfo Video)>(videos.Count);
 
-                videos = [];
-
-                foreach (var group in groups)
+                for (var i = 0; i < videos.Count; i++)
                 {
-                    if (group.Key)
+                    var video = videos[i];
+                    var filename = video.Files[0].FileNameWithoutExtension.ToString();
+                    var match = ResolutionRegex().Match(filename);
+                    if (match.Success)
                     {
-                        videos.InsertRange(0, group
-                            .OrderByDescending(x => x.resolutionMatch.Value, _numericOrdinalComparer)
-                            .ThenBy(x => x.filename, _numericOrdinalComparer)
-                            .Select(x => x.value));
+                        withRes.Add((filename, match.Value, video));
                     }
                     else
                     {
-                        videos.AddRange(group.OrderBy(x => x.filename, _numericOrdinalComparer).Select(x => x.value));
+                        withoutRes.Add((filename, video));
                     }
+                }
+
+                withRes.Sort((x, y) =>
+                {
+                    var cmp = _numericOrdinalComparer.Compare(y.ResValue, x.ResValue);
+                    return cmp != 0 ? cmp : _numericOrdinalComparer.Compare(x.Filename, y.Filename);
+                });
+
+                withoutRes.Sort((x, y) => _numericOrdinalComparer.Compare(x.Filename, y.Filename));
+
+                videos = new List<VideoInfo>(withRes.Count + withoutRes.Count);
+                for (var i = 0; i < withRes.Count; i++)
+                {
+                    videos.Add(withRes[i].Video);
+                }
+
+                for (var i = 0; i < withoutRes.Count; i++)
+                {
+                    videos.Add(withoutRes[i].Video);
                 }
             }
 
             // Prefer a stacked entry (more than one part) as primary
-            var primary = primaryOverride
-                ?? videos.FirstOrDefault(v => v.Files.Count > 1)
-                ?? videos[0];
+            VideoInfo? primary = primaryOverride;
+            if (primary is null)
+            {
+                for (var i = 0; i < videos.Count; i++)
+                {
+                    if (videos[i].Files.Count > 1)
+                    {
+                        primary = videos[i];
+                        break;
+                    }
+                }
+
+                primary ??= videos[0];
+            }
+
             videos.Remove(primary);
 
             primary.AlternateVersions = videos;
