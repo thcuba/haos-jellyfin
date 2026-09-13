@@ -45,7 +45,8 @@ namespace Emby.Naming.Video
                 && match.Groups[2].Success
                 && int.TryParse(match.Groups[2].ValueSpan, NumberStyles.Integer, CultureInfo.InvariantCulture, out var year))
             {
-                result = new CleanDateTimeResult(match.Groups[1].Value.TrimEnd(), year);
+                // Optimization: Use ValueSpan to trim trailing whitespace on ReadOnlySpan<char> before allocating the single resulting string, avoiding intermediate string allocation.
+                result = new CleanDateTimeResult(match.Groups[1].ValueSpan.TrimEnd().ToString(), year);
                 return true;
             }
 
