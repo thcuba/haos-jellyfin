@@ -73,7 +73,7 @@ namespace Emby.Naming.TV
 
             var seasonPrefixMatch = SeasonPrefix().Match(fileName);
             if (seasonPrefixMatch.Success &&
-                int.TryParse(seasonPrefixMatch.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var val))
+                int.TryParse(seasonPrefixMatch.Groups[1].ValueSpan, NumberStyles.Integer, CultureInfo.InvariantCulture, out var val))
             {
                 return (val, true);
             }
@@ -127,7 +127,7 @@ namespace Emby.Naming.TV
             var numberString = match.Groups["seasonnumber"];
             if (numberString.Success)
             {
-                if (int.TryParse(numberString.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seasonNumber))
+                if (int.TryParse(numberString.ValueSpan, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seasonNumber))
                 {
                     return (seasonNumber, true);
                 }
