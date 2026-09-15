@@ -40,7 +40,8 @@ namespace Emby.Naming.TV
                 var titleWithYearMatch = TitleWithYearRegex().Match(seriesName);
                 if (titleWithYearMatch.Success)
                 {
-                    seriesName = titleWithYearMatch.Groups["title"].Value.Trim();
+                    // Optimization: Use ValueSpan.Trim().ToString() to trim on ReadOnlySpan<char> before allocating string.
+                    seriesName = titleWithYearMatch.Groups["title"].ValueSpan.Trim().ToString();
                     return new SeriesInfo(path)
                     {
                         Name = seriesName,

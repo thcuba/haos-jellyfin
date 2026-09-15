@@ -44,7 +44,9 @@ namespace Emby.Naming.Video
             var match = expression.Match(name);
             if (match.Success && match.Groups.TryGetValue("cleaned", out var cleaned))
             {
-                newName = cleaned.Value.Trim();
+                // Optimization: Use ValueSpan.Trim().ToString() to slice on ReadOnlySpan<char>
+                // before allocating the single resulting string, avoiding intermediate string allocation.
+                newName = cleaned.ValueSpan.Trim().ToString();
                 return true;
             }
 
