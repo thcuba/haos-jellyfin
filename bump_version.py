@@ -13,14 +13,20 @@ def main():
     if new_version.startswith('v'):
         new_version = new_version[1:]
 
-    print(f"Bumping version to {new_version}")
+    # Base image version (major.minor) for upstream jellyfin image e.g. "12.1" from "12.1.0"
+    version_parts = new_version.split('.')
+    if len(version_parts) >= 2:
+        base_version = f"{version_parts[0]}.{version_parts[1]}"
+    else:
+        base_version = new_version
+
+    print(f"Bumping version to {new_version} (base image tag: {base_version})")
 
     # 1. Update haos-jellyfin/config.yaml
     config_path = "haos-jellyfin/config.yaml"
     if os.path.exists(config_path):
         with open(config_path, "r") as f:
             content = f.read()
-        # Find version: "..." or version: ...
         new_content = re.sub(r'^(version:\s*)"?[0-9.]+"?', lambda m: f'{m.group(1)}"{new_version}"', content, flags=re.MULTILINE)
         with open(config_path, "w") as f:
             f.write(new_content)
@@ -61,7 +67,8 @@ def main():
     if os.path.exists(dockerfile_path):
         with open(dockerfile_path, "r") as f:
             content = f.read()
-        new_content = re.sub(r'(linuxserver/jellyfin:)[0-9.]+', lambda m: m.group(1) + new_version, content)
+        new_content = re.sub(r'((?:jellyfin|linuxserver)/jellyfin:)[0-9.]+(-rc[0-9]+)?', lambda m: m.group(1) + base_version, content)
+        new_content = re.sub(r'(official jellyfin/jellyfin\s+)[0-9.]+', lambda m: m.group(1) + base_version, new_content)
         with open(dockerfile_path, "w") as f:
             f.write(new_content)
         print(f"Updated {dockerfile_path}")
@@ -71,10 +78,21 @@ def main():
     if os.path.exists(build_yaml_path):
         with open(build_yaml_path, "r") as f:
             content = f.read()
-        new_content = re.sub(r'(linuxserver/jellyfin:)[0-9.]+', lambda m: m.group(1) + new_version, content)
+        new_content = re.sub(r'((?:jellyfin|linuxserver)/jellyfin:)[0-9.]+(-rc[0-9]+)?', lambda m: m.group(1) + base_version, content)
         with open(build_yaml_path, "w") as f:
             f.write(new_content)
         print(f"Updated {build_yaml_path}")
+
+    # 2f. Update haos-jellyfin/README.md if exists
+    readme_path = "haos-jellyfin/README.md"
+    if os.path.exists(readme_path):
+        with open(readme_path, "r") as f:
+            content = f.read()
+        new_content = re.sub(r'(Jellyfin\s+)[0-9.]+', lambda m: m.group(1) + base_version, content)
+        new_content = re.sub(r'((?:jellyfin|linuxserver)/jellyfin:)[0-9.]+(-rc[0-9]+)?', lambda m: m.group(1) + base_version, new_content)
+        with open(readme_path, "w") as f:
+            f.write(new_content)
+        print(f"Updated {readme_path}")
 
     # 3. Update haos-jellyfin/CHANGELOG.md
     changelog_path = "haos-jellyfin/CHANGELOG.md"
@@ -82,7 +100,6 @@ def main():
         with open(changelog_path, "r") as f:
             lines = f.readlines()
 
-        # We want to insert the new version changelog under '# Changelog'
         new_lines = []
         inserted = False
         for line in lines:
@@ -90,7 +107,7 @@ def main():
             if line.strip() == "# Changelog" and not inserted:
                 new_lines.append("\n")
                 new_lines.append(f"## {new_version}\n")
-                new_lines.append(f"- Automated version bump to {new_version}.\n")
+                new_lines.append(f"- Upgraded Jellyfin media server to upstream **{base_version}** (stable) built from the official `jellyfin/jellyfin:{base_version}` image.\n")
                 inserted = True
 
         with open(changelog_path, "w") as f:
@@ -103,16 +120,6 @@ def main():
         with open(issue_template_path, "r") as f:
             content = f.read()
 
-        # We want to find:
-        #   - type: dropdown
-        #     id: version
-        #     attributes:
-        #       label: Jellyfin Server version
-        #       description: What version of Jellyfin are you using?
-        #       options:
-        #         - <first_version>
-        # And insert the new version right before the <first_version>
-        # Let's use a state machine to find the correct options section.
         lines = content.splitlines()
         new_lines = []
         in_version_dropdown = False
@@ -125,7 +132,6 @@ def main():
             if stripped == "id: version":
                 in_version_dropdown = True
             elif in_version_dropdown and stripped.startswith("- type:"):
-                # Left the version dropdown section
                 in_version_dropdown = False
                 in_attributes = False
                 in_options = False
@@ -135,8 +141,6 @@ def main():
                 in_options = True
                 new_lines.append(line)
                 if not inserted:
-                    # Insert the new version as the first option
-                    # We preserve the indentation of the options line
                     indent = len(line) - len(line.lstrip())
                     new_lines.append(" " * (indent + 2) + f"- {new_version}")
                     inserted = True
