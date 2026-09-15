@@ -11,7 +11,7 @@ Jellyfin is a Free Software Media System that puts you in control of managing an
 
 ## Version
 
-This add-on ships **Jellyfin 12.0** (stable release), built from the official `jellyfin/jellyfin:12.0` image.
+This add-on ships **Jellyfin 12.1** (stable release), built from the official `jellyfin/jellyfin:12.1` image.
 
 ## Hardware Acceleration
 

@@ -1,5 +1,8 @@
 # Changelog
 
+## 12.1.0
+- Upgraded Jellyfin media server to upstream **12.1** (stable) built from the official `jellyfin/jellyfin:12.1` image.
+
 ## 12.0.0
 - Upgraded Jellyfin media server to upstream **12.0** (stable) built from the official `jellyfin/jellyfin:12.0` image.
 
