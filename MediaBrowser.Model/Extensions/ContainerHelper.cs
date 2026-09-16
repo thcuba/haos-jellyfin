@@ -87,15 +87,18 @@ public static class ContainerHelper
             return true;
         }
 
+        // Split input and profile containers using zero-allocation span enumerators.
         var allInputContainers = inputContainer.Split(',');
         var allProfileContainers = profileContainers.SpanSplit(',');
         foreach (var container in allInputContainers)
         {
-            if (!container.IsEmpty)
+            var trimmedContainer = container.Trim();
+            if (!trimmedContainer.IsEmpty)
             {
                 foreach (var profile in allProfileContainers)
                 {
-                    if (!profile.IsEmpty && container.Equals(profile, StringComparison.OrdinalIgnoreCase))
+                    var trimmedProfile = profile.Trim();
+                    if (!trimmedProfile.IsEmpty && trimmedContainer.Equals(trimmedProfile, StringComparison.OrdinalIgnoreCase))
                     {
                         return !isNegativeList;
                     }
@@ -123,12 +126,18 @@ public static class ContainerHelper
             return true;
         }
 
-        var allInputContainers = Split(inputContainer);
-        foreach (var container in allInputContainers)
+        // Use SpanSplit on inputContainer span to avoid string array allocations during profile lookup.
+        foreach (var container in inputContainer.SpanSplit(','))
         {
+            var trimmedContainer = container.Trim();
+            if (trimmedContainer.IsEmpty)
+            {
+                continue;
+            }
+
             foreach (var profile in profileContainers)
             {
-                if (string.Equals(profile, container, StringComparison.OrdinalIgnoreCase))
+                if (trimmedContainer.Equals(profile.AsSpan().Trim(), StringComparison.OrdinalIgnoreCase))
                 {
                     return !isNegativeList;
                 }
