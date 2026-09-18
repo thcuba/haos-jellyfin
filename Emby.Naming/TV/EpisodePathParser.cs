@@ -78,17 +78,6 @@ namespace Emby.Naming.TV
             if (result is not null && fillExtendedInfo)
             {
                 FillAdditional(path, result);
-
-                if (!string.IsNullOrEmpty(result.SeriesName))
-                {
-                    // Optimization: Use span trimming to avoid intermediate string allocations.
-                    result.SeriesName = result.SeriesName
-                        .AsSpan()
-                        .Trim()
-                        .Trim("_.-")
-                        .Trim()
-                        .ToString();
-                }
             }
 
             return result ?? new EpisodePathParserResult();
@@ -169,7 +158,17 @@ namespace Emby.Naming.TV
                         }
                     }
 
-                    result.SeriesName = match.Groups["seriesname"].Value;
+                    var seriesNameGroup = match.Groups["seriesname"];
+                    if (seriesNameGroup.Success)
+                    {
+                        // Optimization: Perform span trimming directly on ValueSpan before allocating string to eliminate intermediate untrimmed string allocation.
+                        var trimmedSpan = seriesNameGroup.ValueSpan.Trim().Trim("_.-").Trim();
+                        if (!trimmedSpan.IsEmpty)
+                        {
+                            result.SeriesName = trimmedSpan.ToString();
+                        }
+                    }
+
                     result.Success = result.EpisodeNumber.HasValue;
                 }
                 else
