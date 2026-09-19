@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Emby.Naming.Common;
@@ -80,26 +81,31 @@ namespace Emby.Naming.ExternalFiles
                         break;
                     }
 
-                    string currentSlice = languageString[lastSeparator..];
-                    string currentSliceWithoutSeparator = currentSlice[SeparatorLength..];
+                    var currentSliceSpan = languageString.AsSpan(lastSeparator);
+                    var currentSliceWithoutSeparatorSpan = currentSliceSpan[SeparatorLength..];
 
-                    if (_namingOptions.MediaDefaultFlags.Any(s => currentSliceWithoutSeparator.Contains(s, StringComparison.OrdinalIgnoreCase)))
+                    // Optimization: Use ReadOnlySpan<char> flag matching and slice operations to eliminate
+                    // intermediate string allocations and LINQ delegate/enumerator allocations during flag parsing.
+                    if (ContainsFlag(currentSliceWithoutSeparatorSpan, _namingOptions.MediaDefaultFlags))
                     {
                         pathInfo.IsDefault = true;
+                        var currentSlice = currentSliceSpan.ToString();
                         extraString = extraString.Replace(currentSlice, string.Empty, StringComparison.OrdinalIgnoreCase);
                         languageString = languageString[..lastSeparator];
                         continue;
                     }
 
-                    if (_namingOptions.MediaForcedFlags.Any(s => currentSliceWithoutSeparator.Contains(s, StringComparison.OrdinalIgnoreCase)))
+                    if (ContainsFlag(currentSliceWithoutSeparatorSpan, _namingOptions.MediaForcedFlags))
                     {
                         pathInfo.IsForced = true;
+                        var currentSlice = currentSliceSpan.ToString();
                         extraString = extraString.Replace(currentSlice, string.Empty, StringComparison.OrdinalIgnoreCase);
                         languageString = languageString[..lastSeparator];
                         continue;
                     }
 
                     // Try to translate to three character code
+                    var currentSliceWithoutSeparator = currentSliceWithoutSeparatorSpan.ToString();
                     var culture = _localizationManager.FindLanguageInfo(currentSliceWithoutSeparator);
 
                     if (culture is not null && pathInfo.Language is null)
@@ -107,6 +113,7 @@ namespace Emby.Naming.ExternalFiles
                         pathInfo.Language = culture.Name.Contains('-', StringComparison.OrdinalIgnoreCase)
                                           ? culture.Name
                                           : culture.ThreeLetterISOLanguageName;
+                        var currentSlice = currentSliceSpan.ToString();
                         extraString = extraString.Replace(currentSlice, string.Empty, StringComparison.OrdinalIgnoreCase);
                     }
                     else if (culture is not null && pathInfo.Language == "hin")
@@ -116,16 +123,18 @@ namespace Emby.Naming.ExternalFiles
                         pathInfo.Language = culture.Name.Contains('-', StringComparison.OrdinalIgnoreCase)
                                           ? culture.Name
                                           : culture.ThreeLetterISOLanguageName;
+                        var currentSlice = currentSliceSpan.ToString();
                         extraString = extraString.Replace(currentSlice, string.Empty, StringComparison.OrdinalIgnoreCase);
                     }
-                    else if (_namingOptions.MediaHearingImpairedFlags.Any(s => currentSliceWithoutSeparator.Equals(s, StringComparison.OrdinalIgnoreCase)))
+                    else if (EqualsFlag(currentSliceWithoutSeparatorSpan, _namingOptions.MediaHearingImpairedFlags))
                     {
                         pathInfo.IsHearingImpaired = true;
+                        var currentSlice = currentSliceSpan.ToString();
                         extraString = extraString.Replace(currentSlice, string.Empty, StringComparison.OrdinalIgnoreCase);
                     }
                     else
                     {
-                        titleString = currentSlice + titleString;
+                        titleString = currentSliceSpan.ToString() + titleString;
                     }
 
                     languageString = languageString[..lastSeparator];
@@ -135,6 +144,32 @@ namespace Emby.Naming.ExternalFiles
             }
 
             return pathInfo;
+        }
+
+        private static bool ContainsFlag(ReadOnlySpan<char> slice, IReadOnlyList<string> flags)
+        {
+            for (var i = 0; i < flags.Count; i++)
+            {
+                if (slice.Contains(flags[i], StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool EqualsFlag(ReadOnlySpan<char> slice, IReadOnlyList<string> flags)
+        {
+            for (var i = 0; i < flags.Count; i++)
+            {
+                if (slice.Equals(flags[i], StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }
