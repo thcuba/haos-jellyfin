@@ -27,3 +27,9 @@
 **Learning:** `Path.GetDirectoryName(pathSpan)` returns `ReadOnlySpan<char>`. Calling `.ToString()` on it to compare with `libraryRoot` allocates heap string objects on every item during library scans. `ReadOnlySpan<char>.Equals(libraryRoot, StringComparison.OrdinalIgnoreCase)` compares directory path spans directly with `string?` / `ReadOnlySpan<char>` without allocating heap objects.
 
 **Action:** Use `Path.GetDirectoryName(pathSpan).Equals(libraryRoot, StringComparison.OrdinalIgnoreCase)` directly on `ReadOnlySpan<char>` spans instead of converting directory path spans to `string` with `.ToString()`.
+
+## 2026-09-23 - Zero-allocation file extension resolution in EpisodeResolver
+
+**Learning:** Calling `Path.GetExtension(path)` allocates a heap string for the file extension on every file resolution, and instantiating stateless parser helpers (like `EpisodePathParser`) per resolution call creates unnecessary heap allocations. Using `Path.GetExtension(path.AsSpan())` with `Jellyfin.Extensions.Contains(ReadOnlySpan<char>, StringComparison)` eliminates string allocations during option matching, and caching stateless parser objects as class fields avoids object allocation during library scans.
+
+**Action:** Use `Path.GetExtension(path.AsSpan())` for extension matching and field-cache stateless sub-parsers in resolver classes.
