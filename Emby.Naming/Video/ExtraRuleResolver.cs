@@ -32,8 +32,8 @@ namespace Emby.Naming.Video
             ReadOnlySpan<char> fileNameWithoutExtension = Path.GetFileNameWithoutExtension(pathSpan);
             // Trim the digits from the end of the filename so we can recognize things like -trailer2
             ReadOnlySpan<char> trimmedFileNameWithoutExtension = fileNameWithoutExtension.TrimEnd(_digits);
-            ReadOnlySpan<char> directoryName = Path.GetFileName(Path.GetDirectoryName(pathSpan));
-            string fullDirectory = Path.GetDirectoryName(pathSpan).ToString();
+            ReadOnlySpan<char> directoryPath = Path.GetDirectoryName(pathSpan);
+            ReadOnlySpan<char> directoryName = Path.GetFileName(directoryPath);
 
             foreach (ExtraRule rule in namingOptions.VideoExtraRules)
             {
@@ -43,13 +43,14 @@ namespace Emby.Naming.Video
                     continue;
                 }
 
+                // Optimization: Use ReadOnlySpan<char>.Equals with libraryRoot to avoid allocating a string for directoryPath on every call.
                 bool isMatch = rule.RuleType switch
                 {
                     ExtraRuleType.Filename => fileNameWithoutExtension.Equals(rule.Token, StringComparison.OrdinalIgnoreCase),
                     ExtraRuleType.Suffix => trimmedFileNameWithoutExtension.EndsWith(rule.Token, StringComparison.OrdinalIgnoreCase),
                     ExtraRuleType.Regex => Regex.IsMatch(fileName, rule.Token, RegexOptions.IgnoreCase | RegexOptions.Compiled),
                     ExtraRuleType.DirectoryName => directoryName.Equals(rule.Token, StringComparison.OrdinalIgnoreCase)
-                                                 && !string.Equals(fullDirectory, libraryRoot, StringComparison.OrdinalIgnoreCase),
+                                                 && !directoryPath.Equals(libraryRoot, StringComparison.OrdinalIgnoreCase),
                     _ => false,
                 };
 
