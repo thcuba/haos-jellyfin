@@ -69,7 +69,10 @@ namespace Emby.Naming.Book
 
                 if (match.Groups.TryGetValue(NameMatchGroup, out Group? nameGroup) && nameGroup.Success)
                 {
-                    var comicMatch = ComicRegex().Match(nameGroup.Value.Trim());
+                    // Optimization: Trim nameGroup directly on ReadOnlySpan<char> and materialize a single string
+                    // shared between ComicRegex matching and result.Name, eliminating intermediate heap allocations.
+                    var nameStr = nameGroup.ValueSpan.Trim().ToString();
+                    var comicMatch = ComicRegex().Match(nameStr);
 
                     if (comicMatch.Success)
                     {
@@ -84,7 +87,7 @@ namespace Emby.Naming.Book
                         }
                     }
 
-                    result.Name = nameGroup.ValueSpan.Trim().ToString();
+                    result.Name = nameStr;
                 }
 
                 if (match.Groups.TryGetValue(IndexMatchGroup, out Group? indexGroup) && indexGroup.Success && int.TryParse(indexGroup.ValueSpan, out var index))
