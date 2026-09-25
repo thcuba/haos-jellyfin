@@ -39,6 +39,25 @@ namespace Emby.Naming.Audio
                 return false;
             }
 
+            // Optimization: Perform zero-allocation prefix check on trimmed filename span first.
+            // For the vast majority of tracks that do not start with disc/album stacking prefixes,
+            // this avoids running CleanRegex().Replace() and eliminates string allocations.
+            ReadOnlySpan<char> trimmed = filename.AsSpan().TrimStart(" -._()\t");
+            bool hasMatchingPrefix = false;
+            foreach (var prefix in _options.AlbumStackingPrefixes)
+            {
+                if (trimmed.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    hasMatchingPrefix = true;
+                    break;
+                }
+            }
+
+            if (!hasMatchingPrefix)
+            {
+                return false;
+            }
+
             // TODO: Move this logic into options object
             // Even better, remove the prefixes and come up with regexes
             // But Kodi documentation seems to be weak for audio
