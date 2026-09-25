@@ -33,3 +33,9 @@
 **Learning:** Calling `Path.GetExtension(path)` allocates a heap string for the file extension on every file resolution, and instantiating stateless parser helpers (like `EpisodePathParser`) per resolution call creates unnecessary heap allocations. Using `Path.GetExtension(path.AsSpan())` with `Jellyfin.Extensions.Contains(ReadOnlySpan<char>, StringComparison)` eliminates string allocations during option matching, and caching stateless parser objects as class fields avoids object allocation during library scans.
 
 **Action:** Use `Path.GetExtension(path.AsSpan())` for extension matching and field-cache stateless sub-parsers in resolver classes.
+
+## 2026-09-24 - Zero-allocation prefix check in AlbumParser
+
+**Learning:** Running `CleanRegex().Replace(filename, " ")` before checking option prefixes allocates string objects for 100% of audio files during music scans. Checking `filename.AsSpan().TrimStart(" -._()\t").StartsWith(prefix, StringComparison.OrdinalIgnoreCase)` on `ReadOnlySpan<char>` before regex replacement bypasses regex engine execution and eliminates string allocations for all non-multi-part tracks.
+
+**Action:** Check prefix matches on trimmed `ReadOnlySpan<char>` spans before running expensive regex normalizations.
