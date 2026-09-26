@@ -163,10 +163,7 @@ namespace Emby.Naming.TV
                     {
                         // Optimization: Perform span trimming directly on ValueSpan before allocating string to eliminate intermediate untrimmed string allocation.
                         var trimmedSpan = seriesNameGroup.ValueSpan.Trim().Trim("_.-").Trim();
-                        if (!trimmedSpan.IsEmpty)
-                        {
-                            result.SeriesName = trimmedSpan.ToString();
-                        }
+                        result.SeriesName = trimmedSpan.ToString();
                     }
 
                     result.Success = result.EpisodeNumber.HasValue;
@@ -235,7 +232,7 @@ namespace Emby.Naming.TV
 
             if (string.IsNullOrEmpty(info.SeriesName))
             {
-                info.SeriesName = result.SeriesName;
+                info.SeriesName = result.SeriesName ?? string.Empty;
             }
 
             if (!info.EndingEpisodeNumber.HasValue && result.EndingEpisodeNumber >= info.EpisodeNumber)

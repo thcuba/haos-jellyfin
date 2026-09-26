@@ -39,3 +39,9 @@
 **Learning:** Running `CleanRegex().Replace(filename, " ")` before checking option prefixes allocates string objects for 100% of audio files during music scans. Checking `filename.AsSpan().TrimStart(" -._()\t").StartsWith(prefix, StringComparison.OrdinalIgnoreCase)` on `ReadOnlySpan<char>` before regex replacement bypasses regex engine execution and eliminates string allocations for all non-multi-part tracks.
 
 **Action:** Check prefix matches on trimmed `ReadOnlySpan<char>` spans before running expensive regex normalizations.
+
+## 2026-09-26 - Pre-compiled regex properties in NamingOptions
+
+**Learning:** Calling static `Regex.Match(input, patternString, RegexOptions)` repeatedly in loop iterations queries internal `RegexCache` string keys or instantiates regex pattern objects on every file. Pre-compiling `string[]` expression arrays into `Regex[]` properties in `NamingOptions.Compile()` and executing `regex.Match(input)` directly completely eliminates string lookup overhead during library scans.
+
+**Action:** Expose pre-compiled `Regex[]` properties populated during `NamingOptions.Compile()` for expression collections, and iterate `Regex[]` arrays in parser classes instead of passing raw string patterns to `Regex.Match`.
