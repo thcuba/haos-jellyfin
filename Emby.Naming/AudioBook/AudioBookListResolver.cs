@@ -15,6 +15,7 @@ namespace Emby.Naming.AudioBook
     {
         private readonly NamingOptions _options;
         private readonly AudioBookResolver _audioBookResolver;
+        private readonly AudioBookNameParser _audioBookNameParser;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AudioBookListResolver"/> class.
@@ -24,6 +25,7 @@ namespace Emby.Naming.AudioBook
         {
             _options = options;
             _audioBookResolver = new AudioBookResolver(_options);
+            _audioBookNameParser = new AudioBookNameParser(_options);
         }
 
         /// <summary>
@@ -49,7 +51,7 @@ namespace Emby.Naming.AudioBook
 
                 stackFiles.Sort();
 
-                var nameParserResult = new AudioBookNameParser(_options).Parse(stack.Name);
+                var nameParserResult = _audioBookNameParser.Parse(stack.Name);
 
                 FindExtraAndAlternativeFiles(ref stackFiles, out var extras, out var alternativeVersions, nameParserResult);
 
