@@ -7501,7 +7501,26 @@ namespace MediaBrowser.Controller.MediaEncoding
 
                 if (state.SubtitleStream is not null && !state.SubtitleStream.IsExternal)
                 {
-                    state.InternalSubtitleStreamOffset = mediaStreams.Where(i => i.Type == MediaStreamType.Subtitle && !i.IsExternal).ToList().IndexOf(state.SubtitleStream);
+                    // Bolt performance optimization: Count internal subtitle stream index using a zero-allocation loop
+                    // with early termination instead of allocating a LINQ iterator and temporary List<MediaStream>.
+                    var offset = 0;
+                    var index = -1;
+                    for (var i = 0; i < mediaStreams.Count; i++)
+                    {
+                        var stream = mediaStreams[i];
+                        if (stream.Type == MediaStreamType.Subtitle && !stream.IsExternal)
+                        {
+                            if (stream == state.SubtitleStream)
+                            {
+                                index = offset;
+                                break;
+                            }
+
+                            offset++;
+                        }
+                    }
+
+                    state.InternalSubtitleStreamOffset = index;
                 }
 
                 EnforceResolutionLimit(state);
