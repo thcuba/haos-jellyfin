@@ -51,3 +51,9 @@
 **Learning:** Using `FormattableString.Invariant($"...")` boxes formatted value types, constructs a `FormattableString` object, and allocates an `object[]` arguments array per invocation. Replacing `FormattableString.Invariant` with `string.Create(CultureInfo.InvariantCulture, $"...")` leverages C# interpolated string handlers to format directly into the string memory without `FormattableString` boxing or argument array allocations.
 
 **Action:** Prefer `string.Create(CultureInfo.InvariantCulture, $"...")` over `FormattableString.Invariant($"...")` when building formatted keys or identifiers in tight processing loops.
+
+## 2026-09-28 - Zero-allocation stream index lookup in EncodingHelper
+
+**Learning:** Using `.Where().ToList().IndexOf()` on a collection allocates a closure delegate, a LINQ iterator object, a temporary `List<T>`, and a heap array. An indexed `for` loop with early `break` calculates stream offsets in a single pass with zero heap allocations.
+
+**Action:** Replace `.Where().ToList().IndexOf()` calls on collections with indexed `for` loops and early termination.
