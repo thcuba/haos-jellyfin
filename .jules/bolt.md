@@ -45,3 +45,9 @@
 **Learning:** Calling static `Regex.Match(input, patternString, RegexOptions)` repeatedly in loop iterations queries internal `RegexCache` string keys or instantiates regex pattern objects on every file. Pre-compiling `string[]` expression arrays into `Regex[]` properties in `NamingOptions.Compile()` and executing `regex.Match(input)` directly completely eliminates string lookup overhead during library scans.
 
 **Action:** Expose pre-compiled `Regex[]` properties populated during `NamingOptions.Compile()` for expression collections, and iterate `Regex[]` arrays in parser classes instead of passing raw string patterns to `Regex.Match`.
+
+## 2026-09-27 - Zero-allocation string creation in VideoListResolver
+
+**Learning:** Using `FormattableString.Invariant($"...")` boxes formatted value types, constructs a `FormattableString` object, and allocates an `object[]` arguments array per invocation. Replacing `FormattableString.Invariant` with `string.Create(CultureInfo.InvariantCulture, $"...")` leverages C# interpolated string handlers to format directly into the string memory without `FormattableString` boxing or argument array allocations.
+
+**Action:** Prefer `string.Create(CultureInfo.InvariantCulture, $"...")` over `FormattableString.Invariant($"...")` when building formatted keys or identifiers in tight processing loops.

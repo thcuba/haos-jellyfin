@@ -226,12 +226,18 @@ namespace Emby.Naming.Video
                         && episodeResult.Month.HasValue
                         && episodeResult.Day.HasValue)
                     {
-                        key = FormattableString.Invariant(
+                        // Optimization: Use string.Create with CultureInfo.InvariantCulture instead of FormattableString.Invariant
+                        // to eliminate FormattableString boxing, delegate construction, and object array allocations.
+                        key = string.Create(
+                            CultureInfo.InvariantCulture,
                             $"D{episodeResult.Year.Value}{episodeResult.Month.Value:D2}{episodeResult.Day.Value:D2}");
                     }
                     else if (episodeResult.EpisodeNumber.HasValue)
                     {
-                        key = FormattableString.Invariant(
+                        // Optimization: Use string.Create with CultureInfo.InvariantCulture instead of FormattableString.Invariant
+                        // to eliminate FormattableString boxing, delegate construction, and object array allocations.
+                        key = string.Create(
+                            CultureInfo.InvariantCulture,
                             $"S{episodeResult.SeasonNumber ?? 0}E{episodeResult.EpisodeNumber.Value}");
                     }
                 }
