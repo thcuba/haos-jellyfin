@@ -57,3 +57,9 @@
 **Learning:** Using `.Where().ToList().IndexOf()` on a collection allocates a closure delegate, a LINQ iterator object, a temporary `List<T>`, and a heap array. An indexed `for` loop with early `break` calculates stream offsets in a single pass with zero heap allocations.
 
 **Action:** Replace `.Where().ToList().IndexOf()` calls on collections with indexed `for` loops and early termination.
+
+## 2026-09-29 - Zero-allocation array string splitting in XmlReaderExtensions
+
+**Learning:** Calling `.ToString().Split(separator)` on a `ReadOnlySpan<char>` allocates an intermediate heap string for the trimmed node text and a heap `string[]` array containing elements. Iterating span slices directly with `IndexOfAny(separator)` and `ReadOnlySpan<char>.Trim()` materializes `string` objects only for non-whitespace yielded items, eliminating all intermediate string and array allocations during XML NFO metadata parsing.
+
+**Action:** Iterate string span slices with `IndexOfAny` and `ReadOnlySpan<char>.Trim()` instead of calling `.ToString().Split()` when parsing delimited string content in XML readers.
