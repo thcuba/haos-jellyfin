@@ -63,3 +63,9 @@
 **Learning:** Calling `.ToString().Split(separator)` on a `ReadOnlySpan<char>` allocates an intermediate heap string for the trimmed node text and a heap `string[]` array containing elements. Iterating span slices directly with `IndexOfAny(separator)` and `ReadOnlySpan<char>.Trim()` materializes `string` objects only for non-whitespace yielded items, eliminating all intermediate string and array allocations during XML NFO metadata parsing.
 
 **Action:** Iterate string span slices with `IndexOfAny` and `ReadOnlySpan<char>.Trim()` instead of calling `.ToString().Split()` when parsing delimited string content in XML readers.
+
+## 2026-09-30 - O(1) stacked file lookup in VideoListResolver
+
+**Learning:** Calling `stackResult.Any(s => s.ContainsFile(current.Path, current.IsDirectory))` inside a loop over video files executes an $O(N \times S \times F)$ linear scan and allocates lambda delegates per file. Collecting stacked file paths into a `HashSet<string>(StringComparer.OrdinalIgnoreCase)` beforehand reduces lookups to $O(1)$ and eliminates all loop delegate allocations.
+
+**Action:** Pre-index file collections into a `HashSet<string>` with appropriate string comparison before checking membership in nested video resolution loops.
