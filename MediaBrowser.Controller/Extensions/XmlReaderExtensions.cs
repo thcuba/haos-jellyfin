@@ -172,11 +172,28 @@ public static class XmlReaderExtensions
                 ? stackalloc[] { ',' }
                 : stackalloc[] { '|', ';' };
 
-        foreach (var part in value.AsSpan().Trim().Trim(separator).ToString().Split(separator))
+        // Optimization: Iterate through span slices using IndexOfAny and ReadOnlySpan<char>.Trim() instead of
+        // .ToString().Split() which allocates intermediate string objects and a string[] array on the heap.
+        var span = value.AsSpan().Trim().Trim(separator);
+        while (!span.IsEmpty)
         {
-            if (!string.IsNullOrWhiteSpace(part))
+            var index = span.IndexOfAny(separator);
+            ReadOnlySpan<char> partSpan;
+            if (index < 0)
             {
-                yield return part.Trim();
+                partSpan = span;
+                span = default;
+            }
+            else
+            {
+                partSpan = span[..index];
+                span = span[(index + 1)..];
+            }
+
+            partSpan = partSpan.Trim();
+            if (!partSpan.IsEmpty && !partSpan.IsWhiteSpace())
+            {
+                yield return partSpan.ToString();
             }
         }
     }
