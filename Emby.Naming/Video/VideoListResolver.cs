@@ -56,13 +56,29 @@ namespace Emby.Naming.Video
 
             var stackResult = StackResolver.Resolve(nonExtras, _namingOptions).ToList();
 
+            // Optimization: Collect stacked file paths into a HashSet to avoid O(N * S * F) linear searches
+            // and delegate allocations inside the loop for every video file in the library.
+            HashSet<string>? stackedFiles = null;
+            if (stackResult.Count > 0)
+            {
+                stackedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                for (var i = 0; i < stackResult.Count; i++)
+                {
+                    var files = stackResult[i].Files;
+                    for (var j = 0; j < files.Count; j++)
+                    {
+                        stackedFiles.Add(files[j]);
+                    }
+                }
+            }
+
             var remainingFiles = new List<VideoFileInfo>();
             var standaloneMedia = new List<VideoFileInfo>();
 
             for (var i = 0; i < videoInfos.Count; i++)
             {
                 var current = videoInfos[i];
-                if (stackResult.Any(s => s.ContainsFile(current.Path, current.IsDirectory)))
+                if (stackedFiles is not null && stackedFiles.Contains(current.Path))
                 {
                     continue;
                 }
