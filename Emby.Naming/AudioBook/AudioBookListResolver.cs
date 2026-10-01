@@ -140,8 +140,9 @@ namespace Emby.Naming.AudioBook
 
         private AudioBookFileInfo FindMainAudioBookFile(List<AudioBookFileInfo> files, string name)
         {
-            var main = files.Find(x => Path.GetFileNameWithoutExtension(x.Path).Equals(name, StringComparison.OrdinalIgnoreCase));
-            main ??= files.FirstOrDefault(x => Path.GetFileNameWithoutExtension(x.Path).Equals("audiobook", StringComparison.OrdinalIgnoreCase));
+            // Optimization: Use Path.GetFileNameWithoutExtension(x.Path.AsSpan()) to compare file names on ReadOnlySpan<char> without heap string allocations.
+            var main = files.Find(x => Path.GetFileNameWithoutExtension(x.Path.AsSpan()).Equals(name, StringComparison.OrdinalIgnoreCase));
+            main ??= files.FirstOrDefault(x => Path.GetFileNameWithoutExtension(x.Path.AsSpan()).Equals("audiobook", StringComparison.OrdinalIgnoreCase));
             main ??= files.OrderBy(x => x.Container)
                 .ThenBy(x => x.Path)
                 .First();
