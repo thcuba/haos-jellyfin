@@ -69,3 +69,9 @@
 **Learning:** Calling `stackResult.Any(s => s.ContainsFile(current.Path, current.IsDirectory))` inside a loop over video files executes an $O(N \times S \times F)$ linear scan and allocates lambda delegates per file. Collecting stacked file paths into a `HashSet<string>(StringComparer.OrdinalIgnoreCase)` beforehand reduces lookups to $O(1)$ and eliminates all loop delegate allocations.
 
 **Action:** Pre-index file collections into a `HashSet<string>` with appropriate string comparison before checking membership in nested video resolution loops.
+
+## 2026-10-01 - Single-pass stack-allocated tokenization in Format3DParser
+
+**Learning:** Repeatedly tokenizing a path string for each 3D format rule in `Format3DParser` causes $O(N \times R)$ repeated delimiter searches and span slicing. Tokenizing the path span once into a `stackalloc ReadOnlySpan<char>[128]` buffer reduces path scanning to $O(N)$ single-pass tokenization with zero heap allocations. Remember to clear the tracking span (`remaining = default`) when `IndexOfAny` returns `-1` to ensure tokenization terminates cleanly and avoids unnecessary fallback paths.
+
+**Action:** Tokenize path spans once into `stackalloc ReadOnlySpan<char>[]` buffers before checking rules, and make sure `remaining` span state is cleared when processing the final token.
