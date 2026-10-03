@@ -75,3 +75,9 @@
 **Learning:** Repeatedly tokenizing a path string for each 3D format rule in `Format3DParser` causes $O(N \times R)$ repeated delimiter searches and span slicing. Tokenizing the path span once into a `stackalloc ReadOnlySpan<char>[128]` buffer reduces path scanning to $O(N)$ single-pass tokenization with zero heap allocations. Remember to clear the tracking span (`remaining = default`) when `IndexOfAny` returns `-1` to ensure tokenization terminates cleanly and avoids unnecessary fallback paths.
 
 **Action:** Tokenize path spans once into `stackalloc ReadOnlySpan<char>[]` buffers before checking rules, and make sure `remaining` span state is cleared when processing the final token.
+
+## 2026-10-02 - Span lookups on FrozenSet and FrozenDictionary in MimeTypes
+
+**Learning:** Using `.GetAlternateLookup<ReadOnlySpan<char>>()` on `FrozenDictionary` and `FrozenSet` instances along with `Path.GetExtension(path.AsSpan())` and `ReadOnlySpan<char>` slicing allows checking MIME types and extensions with zero string heap allocations per request or file probe.
+
+**Action:** Prefer calling `.GetAlternateLookup<ReadOnlySpan<char>>()` on `FrozenDictionary` and `FrozenSet` collections when performing string lookups with span inputs.
