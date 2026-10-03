@@ -160,9 +160,11 @@ namespace MediaBrowser.Model.Net
         {
             ArgumentException.ThrowIfNullOrEmpty(filename);
 
-            var ext = Path.GetExtension(filename);
+            // Optimization: Get extension as ReadOnlySpan<char> to avoid heap string allocation per lookup.
+            ReadOnlySpan<char> extSpan = Path.GetExtension(filename.AsSpan());
 
-            if (_mimeTypeLookup.TryGetValue(ext, out string? result))
+            // Query FrozenDictionary using GetAlternateLookup<ReadOnlySpan<char>>() for zero-allocation lookup.
+            if (_mimeTypeLookup.GetAlternateLookup<ReadOnlySpan<char>>().TryGetValue(extSpan, out string? result))
             {
                 return result;
             }
@@ -172,10 +174,10 @@ namespace MediaBrowser.Model.Net
                 return mimeType;
             }
 
-            // Catch-all for all video types that don't require specific mime types
-            if (_videoFileExtensions.Contains(ext))
+            // Catch-all for all video types using span lookup on FrozenSet.
+            if (_videoFileExtensions.GetAlternateLookup<ReadOnlySpan<char>>().Contains(extSpan))
             {
-                return string.Concat("video/", ext.AsSpan(1));
+                return string.Concat("video/", extSpan[1..]);
             }
 
             return defaultValue;
@@ -185,15 +187,17 @@ namespace MediaBrowser.Model.Net
         {
             ArgumentException.ThrowIfNullOrEmpty(mimeType);
 
-            // handle text/html; charset=UTF-8
-            mimeType = mimeType.AsSpan().LeftPart(';').ToString();
+            // Optimization: Slice mimeType up to ';' as ReadOnlySpan<char> to avoid intermediate string allocation.
+            ReadOnlySpan<char> mimeTypeSpan = mimeType.AsSpan().LeftPart(';');
 
-            if (_extensionLookup.TryGetValue(mimeType, out string? result))
+            // Query FrozenDictionary using GetAlternateLookup<ReadOnlySpan<char>>().
+            if (_extensionLookup.GetAlternateLookup<ReadOnlySpan<char>>().TryGetValue(mimeTypeSpan, out string? result))
             {
                 return result;
             }
 
-            var extension = Model.MimeTypes.GetMimeTypeExtensions(mimeType).FirstOrDefault();
+            string mimeTypeString = mimeTypeSpan.Length == mimeType.Length ? mimeType : mimeTypeSpan.ToString();
+            var extension = Model.MimeTypes.GetMimeTypeExtensions(mimeTypeString).FirstOrDefault();
             return string.IsNullOrEmpty(extension) ? null : "." + extension;
         }
 
