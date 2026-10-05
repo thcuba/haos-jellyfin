@@ -81,3 +81,9 @@
 **Learning:** Using `.GetAlternateLookup<ReadOnlySpan<char>>()` on `FrozenDictionary` and `FrozenSet` instances along with `Path.GetExtension(path.AsSpan())` and `ReadOnlySpan<char>` slicing allows checking MIME types and extensions with zero string heap allocations per request or file probe.
 
 **Action:** Prefer calling `.GetAlternateLookup<ReadOnlySpan<char>>()` on `FrozenDictionary` and `FrozenSet` collections when performing string lookups with span inputs.
+
+## 2026-10-03 - Zero-allocation prefix parameter passing in LocalImageProvider
+
+**Learning:** Concatenating prefix and filename strings (e.g. `imagePrefix + firstFileName`, `imagePrefix + subsequentFileNamePrefix + i`, `filename + "-poster"`) before passing them to lookup methods allocates heap string objects on every backdrop and image check. `GetImage` already accepts an optional `prefix` parameter and performs zero-allocation span checks (`fileName.StartsWith(prefix, ...) && fileName.EndsWith(name, ...)`).
+
+**Action:** Pass `prefix` parameters directly to filename lookup routines instead of concatenating strings before calling them.
