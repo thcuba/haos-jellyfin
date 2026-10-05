@@ -357,13 +357,16 @@ namespace MediaBrowser.LocalMetadata.Images
 
         private void PopulateBackdrops(List<LocalImageInfo> images, List<FileSystemMetadata> files, string imagePrefix, string firstFileName, string subsequentFileNamePrefix, bool isInMixedFolder, ImageType type)
         {
-            AddImage(files, images, imagePrefix + firstFileName, type);
+            // Bolt performance optimization: Pass imagePrefix as the prefix parameter to AddImage/GetImage
+            // instead of concatenating imagePrefix + firstFileName / imagePrefix + subsequentFileNamePrefix + i,
+            // eliminating heap string allocations on every backdrop image check.
+            AddImage(files, images, firstFileName, type, imagePrefix);
 
             var unfound = 0;
             for (var i = 1; i <= 20; i++)
             {
                 // Screenshot Image
-                var found = AddImage(files, images, imagePrefix + subsequentFileNamePrefix + i, type);
+                var found = AddImage(files, images, subsequentFileNamePrefix + i, type, imagePrefix);
 
                 if (!found)
                 {
@@ -429,10 +432,13 @@ namespace MediaBrowser.LocalMetadata.Images
 
             foreach (var filename in filenamePrefixes)
             {
-                AddImage(seriesFiles, images, filename + "-poster", ImageType.Primary);
-                AddImage(seriesFiles, images, filename + "-fanart", ImageType.Backdrop);
-                AddImage(seriesFiles, images, filename + "-banner", ImageType.Banner);
-                AddImage(seriesFiles, images, filename + "-landscape", ImageType.Thumb);
+                // Bolt performance optimization: Construct seasonPrefix once per prefix and pass it as the prefix parameter,
+                // avoiding individual string concatenation per image type lookup.
+                var seasonPrefix = filename + "-";
+                AddImage(seriesFiles, images, "poster", ImageType.Primary, seasonPrefix);
+                AddImage(seriesFiles, images, "fanart", ImageType.Backdrop, seasonPrefix);
+                AddImage(seriesFiles, images, "banner", ImageType.Banner, seasonPrefix);
+                AddImage(seriesFiles, images, "landscape", ImageType.Thumb, seasonPrefix);
             }
         }
 
