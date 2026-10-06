@@ -87,3 +87,9 @@
 **Learning:** Concatenating prefix and filename strings (e.g. `imagePrefix + firstFileName`, `imagePrefix + subsequentFileNamePrefix + i`, `filename + "-poster"`) before passing them to lookup methods allocates heap string objects on every backdrop and image check. `GetImage` already accepts an optional `prefix` parameter and performs zero-allocation span checks (`fileName.StartsWith(prefix, ...) && fileName.EndsWith(name, ...)`).
 
 **Action:** Pass `prefix` parameters directly to filename lookup routines instead of concatenating strings before calling them.
+
+## 2026-10-04 - Zero-allocation span slicing in BaseItemXmlParser and BaseNfoParser
+
+**Learning:** Parsing delimited string fields in metadata parsers using `val.Split('|')` or `val.Split('/')` with LINQ queries (`.Select()`, `.Where()`, `.OfType()`) allocates intermediate `string[]` arrays, token strings, delegate closures, and LINQ iterator objects per element during library scans. Using `MemoryExtensions.Split()` on `ReadOnlySpan<char>` slices tokens with zero string allocations and allows parsing enums directly via `Enum.TryParse<T>(partSpan, ignoreCase: true, out var field)`.
+
+**Action:** Use `MemoryExtensions.Split()` on `ReadOnlySpan<char>` for delimited string field parsing in metadata XML/NFO readers to eliminate heap array and string allocations.
