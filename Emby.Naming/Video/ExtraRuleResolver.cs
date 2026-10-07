@@ -43,12 +43,13 @@ namespace Emby.Naming.Video
                     continue;
                 }
 
-                // Optimization: Use ReadOnlySpan<char>.Equals with libraryRoot to avoid allocating a string for directoryPath on every call.
+                // Optimization: Use ReadOnlySpan<char>.Equals with libraryRoot to avoid allocating a string for directoryPath on every call,
+                // and use rule.Regex.IsMatch(fileName) on ReadOnlySpan<char> to avoid string allocations for Regex extra rules.
                 bool isMatch = rule.RuleType switch
                 {
                     ExtraRuleType.Filename => fileNameWithoutExtension.Equals(rule.Token, StringComparison.OrdinalIgnoreCase),
                     ExtraRuleType.Suffix => trimmedFileNameWithoutExtension.EndsWith(rule.Token, StringComparison.OrdinalIgnoreCase),
-                    ExtraRuleType.Regex => Regex.IsMatch(fileName, rule.Token, RegexOptions.IgnoreCase | RegexOptions.Compiled),
+                    ExtraRuleType.Regex => rule.Regex is not null && rule.Regex.IsMatch(fileName),
                     ExtraRuleType.DirectoryName => directoryName.Equals(rule.Token, StringComparison.OrdinalIgnoreCase)
                                                  && !directoryPath.Equals(libraryRoot, StringComparison.OrdinalIgnoreCase),
                     _ => false,
