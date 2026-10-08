@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using MediaBrowser.Model.Entities;
 using MediaType = Emby.Naming.Common.MediaType;
 
@@ -8,6 +9,10 @@ namespace Emby.Naming.Video
     /// </summary>
     public class ExtraRule
     {
+        private string _token;
+        private ExtraRuleType _ruleType;
+        private Regex? _regex;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ExtraRule"/> class.
         /// </summary>
@@ -17,16 +22,27 @@ namespace Emby.Naming.Video
         /// <param name="mediaType">Media type.</param>
         public ExtraRule(ExtraType extraType, ExtraRuleType ruleType, string token, MediaType mediaType)
         {
-            Token = token;
+            _token = token;
             ExtraType = extraType;
-            RuleType = ruleType;
+            _ruleType = ruleType;
             MediaType = mediaType;
         }
 
         /// <summary>
         /// Gets or sets the token to use for matching against the file path.
         /// </summary>
-        public string Token { get; set; }
+        public string Token
+        {
+            get => _token;
+            set
+            {
+                if (_token != value)
+                {
+                    _token = value;
+                    _regex = null;
+                }
+            }
+        }
 
         /// <summary>
         /// Gets or sets the type of the extra to return when matched.
@@ -36,11 +52,38 @@ namespace Emby.Naming.Video
         /// <summary>
         /// Gets or sets the type of the rule.
         /// </summary>
-        public ExtraRuleType RuleType { get; set; }
+        public ExtraRuleType RuleType
+        {
+            get => _ruleType;
+            set
+            {
+                if (_ruleType != value)
+                {
+                    _ruleType = value;
+                    _regex = null;
+                }
+            }
+        }
 
         /// <summary>
         /// Gets or sets the type of the media to return when matched.
         /// </summary>
         public MediaType MediaType { get; set; }
+
+        /// <summary>
+        /// Gets a compiled <see cref="Regex"/> instance for <see cref="ExtraRuleType.Regex"/> rules (cached for performance).
+        /// </summary>
+        public Regex? Regex
+        {
+            get
+            {
+                if (_ruleType != ExtraRuleType.Regex)
+                {
+                    return null;
+                }
+
+                return _regex ??= new Regex(_token, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            }
+        }
     }
 }
