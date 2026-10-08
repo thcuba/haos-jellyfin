@@ -1650,15 +1650,17 @@ namespace MediaBrowser.Controller.MediaEncoding
             // Use long arithmetic to prevent int32 overflow for very high bitrate values.
             int bufsize = (int)Math.Min((long)bitrate * 2, int.MaxValue);
 
+            // Optimization: Use string.Create with CultureInfo.InvariantCulture instead of FormattableString.Invariant
+            // to eliminate FormattableString boxing, delegate construction, and object array allocations.
             if (string.Equals(videoCodec, "libsvtav1", StringComparison.OrdinalIgnoreCase))
             {
-                return FormattableString.Invariant($" -b:v {bitrate} -bufsize {bufsize}");
+                return string.Create(CultureInfo.InvariantCulture, $" -b:v {bitrate} -bufsize {bufsize}");
             }
 
             if (string.Equals(videoCodec, "libx264", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(videoCodec, "libx265", StringComparison.OrdinalIgnoreCase))
             {
-                return FormattableString.Invariant($" -maxrate {bitrate} -bufsize {bufsize}");
+                return string.Create(CultureInfo.InvariantCulture, $" -maxrate {bitrate} -bufsize {bufsize}");
             }
 
             if (string.Equals(videoCodec, "h264_qsv", StringComparison.OrdinalIgnoreCase)
@@ -1696,14 +1698,14 @@ namespace MediaBrowser.Controller.MediaEncoding
                 int qsvInitOcc = (int)Math.Min((long)bitrate * 1 * factor, int.MaxValue);
                 int qsvBufsize = (int)Math.Min((long)bitrate * 2 * factor, int.MaxValue);
 
-                return FormattableString.Invariant($"{mbbrcOpt} -b:v {bitrate} -maxrate {qsvMaxrate} -rc_init_occupancy {qsvInitOcc} -bufsize {qsvBufsize}");
+                return string.Create(CultureInfo.InvariantCulture, $"{mbbrcOpt} -b:v {bitrate} -maxrate {qsvMaxrate} -rc_init_occupancy {qsvInitOcc} -bufsize {qsvBufsize}");
             }
 
             if (string.Equals(videoCodec, "h264_amf", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(videoCodec, "hevc_amf", StringComparison.OrdinalIgnoreCase))
             {
                 // Override the too high default qmin 18 in transcoding preset in legacy h26x_amf
-                return FormattableString.Invariant($" -rc cbr -qmin 0 -qmax 32 -b:v {bitrate} -maxrate {bitrate} -bufsize {bufsize}");
+                return string.Create(CultureInfo.InvariantCulture, $" -rc cbr -qmin 0 -qmax 32 -b:v {bitrate} -maxrate {bitrate} -bufsize {bufsize}");
             }
 
             if (string.Equals(videoCodec, "h264_vaapi", StringComparison.OrdinalIgnoreCase)
@@ -1713,10 +1715,10 @@ namespace MediaBrowser.Controller.MediaEncoding
                 // VBR in i965 driver may result in pixelated output.
                 if (_mediaEncoder.IsVaapiDeviceInteli965)
                 {
-                    return FormattableString.Invariant($" -rc_mode CBR -b:v {bitrate} -maxrate {bitrate} -bufsize {bufsize}");
+                    return string.Create(CultureInfo.InvariantCulture, $" -rc_mode CBR -b:v {bitrate} -maxrate {bitrate} -bufsize {bufsize}");
                 }
 
-                return FormattableString.Invariant($" -rc_mode VBR -b:v {bitrate} -maxrate {bitrate} -bufsize {bufsize}");
+                return string.Create(CultureInfo.InvariantCulture, $" -rc_mode VBR -b:v {bitrate} -maxrate {bitrate} -bufsize {bufsize}");
             }
 
             if (string.Equals(videoCodec, "h264_videotoolbox", StringComparison.OrdinalIgnoreCase)
@@ -1724,10 +1726,10 @@ namespace MediaBrowser.Controller.MediaEncoding
             {
                 // The `maxrate` and `bufsize` options can potentially lead to performance regression
                 // and even encoder hangs, especially when the value is very high.
-                return FormattableString.Invariant($" -b:v {bitrate} -qmin -1 -qmax -1");
+                return string.Create(CultureInfo.InvariantCulture, $" -b:v {bitrate} -qmin -1 -qmax -1");
             }
 
-            return FormattableString.Invariant($" -b:v {bitrate} -maxrate {bitrate} -bufsize {bufsize}");
+            return string.Create(CultureInfo.InvariantCulture, $" -b:v {bitrate} -maxrate {bitrate} -bufsize {bufsize}");
         }
 
         private string GetEncoderParam(EncoderPreset? preset, EncoderPreset defaultPreset, EncodingOptions encodingOptions, string videoEncoder, bool isLibX265)
