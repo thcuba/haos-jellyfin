@@ -78,7 +78,10 @@ public static class BaseItemMapper
         dto.TotalBitrate = entity.TotalBitrate;
         dto.ExternalId = entity.ExternalId;
         dto.Size = entity.Size;
-        dto.Genres = string.IsNullOrWhiteSpace(entity.Genres) ? [] : entity.Genres.Split('|');
+
+        // Optimization: Fast-path pipe-delimited string splitting avoids string.Split allocations
+        // for null, empty, whitespace, and single-value metadata strings during database entity mapping.
+        dto.Genres = SplitPipeDelimited(entity.Genres);
         dto.DateCreated = entity.DateCreated ?? DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
         dto.DateModified = entity.DateModified ?? DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
         dto.ChannelId = entity.ChannelId ?? Guid.Empty;
@@ -109,9 +112,9 @@ public static class BaseItemMapper
             dto.Audio = (ProgramAudio)entity.Audio;
         }
 
-        dto.ProductionLocations = entity.ProductionLocations?.Split('|', StringSplitOptions.RemoveEmptyEntries) ?? [];
-        dto.Studios = entity.Studios?.Split('|') ?? [];
-        dto.Tags = string.IsNullOrWhiteSpace(entity.Tags) ? [] : entity.Tags.Split('|');
+        dto.ProductionLocations = SplitPipeDelimited(entity.ProductionLocations, removeEmptyEntries: true);
+        dto.Studios = SplitPipeDelimited(entity.Studios);
+        dto.Tags = SplitPipeDelimited(entity.Tags);
 
         if (dto is IHasProgramAttributes hasProgramAttributes)
         {
@@ -166,12 +169,12 @@ public static class BaseItemMapper
 
         if (dto is IHasArtist hasArtists)
         {
-            hasArtists.Artists = entity.Artists?.Split('|', StringSplitOptions.RemoveEmptyEntries) ?? [];
+            hasArtists.Artists = SplitPipeDelimited(entity.Artists, removeEmptyEntries: true);
         }
 
         if (dto is IHasAlbumArtist hasAlbumArtists)
         {
-            hasAlbumArtists.AlbumArtists = entity.AlbumArtists?.Split('|', StringSplitOptions.RemoveEmptyEntries) ?? [];
+            hasAlbumArtists.AlbumArtists = SplitPipeDelimited(entity.AlbumArtists, removeEmptyEntries: true);
         }
 
         if (dto is LiveTvProgram program)
@@ -502,5 +505,26 @@ public static class BaseItemMapper
         }
 
         return appHost.ReverseVirtualPath(path);
+    }
+
+    /// <summary>
+    /// Fast-path helper to split pipe-delimited strings in database entities into string arrays.
+    /// Avoids string.Split overhead and intermediate allocations for null, empty, whitespace, and single-value inputs.
+    /// </summary>
+    private static string[] SplitPipeDelimited(string? input, bool removeEmptyEntries = false)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return [];
+        }
+
+        var span = input.AsSpan();
+        int pipeIndex = span.IndexOf('|');
+        if (pipeIndex == -1)
+        {
+            return [input];
+        }
+
+        return input.Split('|', removeEmptyEntries ? StringSplitOptions.RemoveEmptyEntries : StringSplitOptions.None);
     }
 }
