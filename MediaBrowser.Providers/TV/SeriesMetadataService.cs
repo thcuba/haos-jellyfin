@@ -360,11 +360,14 @@ public class SeriesMetadataService : MetadataService<Series, SeriesInfo>
             }
         }
 
+        var seasonsByNumber = seasons
+            .DistinctBy(s => s.IndexNumber)
+            .ToDictionary(s => s.IndexNumber);
+
         // Loop through episodes
         foreach (var episode in episodes)
         {
-            var season = seasons.FirstOrDefault(i => i.IndexNumber == episode.ParentIndexNumber);
-            if (season is null || episode.SeasonId.Equals(season.Id))
+            if (!seasonsByNumber.TryGetValue(episode.ParentIndexNumber, out var season) || episode.SeasonId.Equals(season.Id))
             {
                 continue;
             }
