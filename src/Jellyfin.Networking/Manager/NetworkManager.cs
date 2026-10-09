@@ -1087,10 +1087,11 @@ public class NetworkManager : INetworkManager, IDisposable
                 .ToList();
         }
 
+        var orderedInterfaces = _interfaces.OrderBy(x => x.Index).ToList();
         foreach (var data in validPublishedServerUrls)
         {
             // Get interface matching override subnet
-            var intf = _interfaces.OrderBy(x => x.Index).FirstOrDefault(x => NetworkUtils.SubnetContainsAddress(data.Data.Subnet, x.Address));
+            var intf = orderedInterfaces.FirstOrDefault(x => NetworkUtils.SubnetContainsAddress(data.Data.Subnet, x.Address));
 
             if (intf?.Address is not null
                 || (data.Data.AddressFamily == AddressFamily.InterNetwork && data.Data.Address.Equals(IPAddress.Any))
