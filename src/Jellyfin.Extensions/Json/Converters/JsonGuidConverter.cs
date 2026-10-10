@@ -16,9 +16,10 @@ namespace Jellyfin.Extensions.Json.Converters
                 ? Guid.Empty
                 : ReadInternal(ref reader);
 
-        // TODO: optimize by parsing the UTF8 bytes instead of converting to string first
         internal static Guid ReadInternal(ref Utf8JsonReader reader)
-            => Guid.Parse(reader.GetString()!); // null got handled higher up the call stack
+            => reader.TryGetGuid(out var value)
+                ? value
+                : Guid.Parse(reader.GetString()!); // null got handled higher up the call stack
 
         /// <inheritdoc />
         public override void Write(Utf8JsonWriter writer, Guid value, JsonSerializerOptions options)
