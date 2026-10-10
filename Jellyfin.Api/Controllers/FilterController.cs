@@ -178,16 +178,44 @@ public class FilterController : BaseJellyfinApiController
             IsSeries = isSeries
         };
 
+<<<<<<< HEAD
+=======
+        var tagQuery = new InternalItemsQuery(user)
+        {
+            IncludeItemTypes = includeItemTypes,
+            DtoOptions = new DtoOptions
+            {
+                Fields = Array.Empty<ItemFields>(),
+                EnableImages = false,
+                EnableUserData = false
+            },
+            IsAiring = isAiring,
+            IsMovie = isMovie,
+            IsSports = isSports,
+            IsKids = isKids,
+            IsNews = isNews,
+            IsSeries = isSeries
+        };
+
+>>>>>>> upstream/release-12.z
         if ((recursive ?? true) || parentItem is UserView || parentItem is ICollectionFolder)
         {
             var ancestorIds = parentItem is null ? Array.Empty<Guid>() : new[] { parentItem.Id };
             genreQuery.AncestorIds = ancestorIds;
             streamLanguageQuery.AncestorIds = ancestorIds;
+<<<<<<< HEAD
+=======
+            tagQuery.AncestorIds = ancestorIds;
+>>>>>>> upstream/release-12.z
         }
         else
         {
             genreQuery.Parent = parentItem;
             streamLanguageQuery.Parent = parentItem;
+<<<<<<< HEAD
+=======
+            tagQuery.Parent = parentItem;
+>>>>>>> upstream/release-12.z
         }
 
         if ((includeItemTypes.Contains(BaseItemKind.Series) || includeItemTypes.Contains(BaseItemKind.Season))
@@ -218,6 +246,11 @@ public class FilterController : BaseJellyfinApiController
             }).ToArray();
         }
 
+<<<<<<< HEAD
+=======
+        filters.Tags = _libraryManager.GetTagNames(tagQuery);
+
+>>>>>>> upstream/release-12.z
         if (includeItemTypes.Contains(BaseItemKind.Movie)
             || includeItemTypes.Contains(BaseItemKind.Series)
             || includeItemTypes.Contains(BaseItemKind.Season)

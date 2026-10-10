@@ -33,10 +33,17 @@ namespace Emby.Naming.Book
         private static readonly Regex[] _nameMatches =
         [
             // seriesName (seriesYear) #index (of count) (year) where only seriesName and index are required
+<<<<<<< HEAD
             SeriesIndexYearRegex(),
             NameSeriesIndexRegex(),
             IndexNameRegex(),
             NameYearRegex(),
+=======
+            new Regex(@"^(?<seriesName>.+?)((\s\((?<seriesYear>[0-9]{4})\))?)\s#(?<index>[0-9]+)(?:\.0)?((\s\(of\s(?<count>[0-9]+)\))?)((\s\((?<year>[0-9]{4})\))?)$"),
+            new Regex(@"^(?<name>.+?)\s\((?<seriesName>.+?),\s#(?<index>[0-9]+)\)(?:\.0)?((\s\((?<year>[0-9]{4})\))?)$"),
+            new Regex(@"^(?<index>[0-9]+)(?:\.0)?\s\-\s(?<name>.+?)((\s\((?<year>[0-9]{4})\))?)$"),
+            new Regex(@"(?<name>.*)\((?<year>[0-9]{4})\)"),
+>>>>>>> upstream/release-12.z
             // last resort matches the whole string as the name
             CatchAllNameRegex()
         ];
@@ -69,10 +76,14 @@ namespace Emby.Naming.Book
 
                 if (match.Groups.TryGetValue(NameMatchGroup, out Group? nameGroup) && nameGroup.Success)
                 {
+<<<<<<< HEAD
                     // Optimization: Trim nameGroup directly on ReadOnlySpan<char> and materialize a single string
                     // shared between ComicRegex matching and result.Name, eliminating intermediate heap allocations.
                     var nameStr = nameGroup.ValueSpan.Trim().ToString();
                     var comicMatch = ComicRegex().Match(nameStr);
+=======
+                    var comicMatch = ComicRegex().Match(nameGroup.Value.Trim());
+>>>>>>> upstream/release-12.z
 
                     if (comicMatch.Success)
                     {
@@ -87,7 +98,11 @@ namespace Emby.Naming.Book
                         }
                     }
 
+<<<<<<< HEAD
                     result.Name = nameStr;
+=======
+                    result.Name = nameGroup.ValueSpan.Trim().ToString();
+>>>>>>> upstream/release-12.z
                 }
 
                 if (match.Groups.TryGetValue(IndexMatchGroup, out Group? indexGroup) && indexGroup.Success && int.TryParse(indexGroup.ValueSpan, out var index))

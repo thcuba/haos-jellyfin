@@ -30,7 +30,7 @@ namespace Emby.Naming.Video
             ReadOnlySpan<char> pathSpan = path.AsSpan();
             ReadOnlySpan<char> fileName = Path.GetFileName(pathSpan);
             ReadOnlySpan<char> fileNameWithoutExtension = Path.GetFileNameWithoutExtension(pathSpan);
-            // Trim the digits from the end of the filename so we can recognize things like -trailer2
+            // Trim the digits from the end of the filename so we can recognize things like -trailer2 or sample1
             ReadOnlySpan<char> trimmedFileNameWithoutExtension = fileNameWithoutExtension.TrimEnd(_digits);
             ReadOnlySpan<char> directoryPath = Path.GetDirectoryName(pathSpan);
             ReadOnlySpan<char> directoryName = Path.GetFileName(directoryPath);
@@ -47,7 +47,7 @@ namespace Emby.Naming.Video
                 // and use rule.Regex.IsMatch(fileName) on ReadOnlySpan<char> to avoid string allocations for Regex extra rules.
                 bool isMatch = rule.RuleType switch
                 {
-                    ExtraRuleType.Filename => fileNameWithoutExtension.Equals(rule.Token, StringComparison.OrdinalIgnoreCase),
+                    ExtraRuleType.Filename => trimmedFileNameWithoutExtension.Equals(rule.Token, StringComparison.OrdinalIgnoreCase),
                     ExtraRuleType.Suffix => trimmedFileNameWithoutExtension.EndsWith(rule.Token, StringComparison.OrdinalIgnoreCase),
                     ExtraRuleType.Regex => rule.Regex is not null && rule.Regex.IsMatch(fileName),
                     ExtraRuleType.DirectoryName => directoryName.Equals(rule.Token, StringComparison.OrdinalIgnoreCase)

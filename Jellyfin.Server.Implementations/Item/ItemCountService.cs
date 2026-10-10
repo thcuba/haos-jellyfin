@@ -414,7 +414,11 @@ public class ItemCountService : IItemCountService
         using var dbContext = _dbProvider.CreateDbContext();
 
         var baseQuery = BuildGroupedDescendantsQuery(dbContext, filter, ancestorId);
+<<<<<<< HEAD
         return baseQuery.Count(b => b.UserData!.Any(u => u.UserId == filter.User.Id && u.Played));
+=======
+        return baseQuery.Count(DescendantQueryHelper.IsPlayedBy(filter.User.Id));
+>>>>>>> upstream/release-12.z
     }
 
     /// <inheritdoc/>
@@ -483,7 +487,23 @@ public class ItemCountService : IItemCountService
 
         var includeVirtual = user is null || user.DisplayMissingEpisodes;
 
+<<<<<<< HEAD
         var hierarchicalCounts = dbContext.BaseItems
+=======
+        var accessibleItems = dbContext.BaseItems.AsNoTracking();
+        if (user is null)
+        {
+            // Access filtering is what would otherwise drop an alternate version, and a child count
+            // must not report a title twice just because no user was passed in.
+            accessibleItems = accessibleItems.Where(DescendantQueryHelper.IsDistinctLibraryItem);
+        }
+        else
+        {
+            accessibleItems = _queryHelpers.ApplyAccessFiltering(dbContext, accessibleItems, new InternalItemsQuery(user));
+        }
+
+        var hierarchicalCounts = accessibleItems
+>>>>>>> upstream/release-12.z
             .Where(b => b.ParentId.HasValue && !b.SeasonId.HasValue && (includeVirtual || !b.IsVirtualItem))
             .WhereOneOrMany(parentIdsArray, b => b.ParentId!.Value)
             .GroupBy(b => b.ParentId!.Value)
@@ -493,13 +513,18 @@ public class ItemCountService : IItemCountService
         // An episode is a child of its season even when it is not stored under one: with a flat
         // structure ParentId points at the series, so counting by ParentId alone leaves the season
         // empty and counts its episodes towards the series instead.
+<<<<<<< HEAD
         var seasonCounts = dbContext.BaseItems
+=======
+        var seasonCounts = accessibleItems
+>>>>>>> upstream/release-12.z
             .Where(b => b.SeasonId.HasValue && (includeVirtual || !b.IsVirtualItem))
             .WhereOneOrMany(parentIdsArray, b => b.SeasonId!.Value)
             .GroupBy(b => b.SeasonId!.Value)
             .Select(g => new { SeasonId = g.Key, Count = g.Count() })
             .ToDictionary(x => x.SeasonId, x => x.Count);
 
+<<<<<<< HEAD
         var linkedCounts = dbContext.LinkedChildren
             .WhereOneOrMany(parentIdsArray, lc => lc.ParentId)
             .GroupBy(lc => lc.ParentId)
@@ -507,6 +532,17 @@ public class ItemCountService : IItemCountService
             .ToDictionary(x => x.ParentId, x => x.Count);
 
         var mergedChildCounts = GetMergedChildCounts(dbContext, parentIdsArray, includeVirtual);
+=======
+        // A linked child counts only when the item it points at is one the user may open.
+        var linkedCounts = dbContext.LinkedChildren
+            .WhereOneOrMany(parentIdsArray, lc => lc.ParentId)
+            .Join(accessibleItems, lc => lc.ChildId, b => b.Id, (lc, b) => lc.ParentId)
+            .GroupBy(parentId => parentId)
+            .Select(g => new { ParentId = g.Key, Count = g.Count() })
+            .ToDictionary(x => x.ParentId, x => x.Count);
+
+        var mergedChildCounts = GetMergedChildCounts(dbContext, accessibleItems, parentIdsArray, includeVirtual);
+>>>>>>> upstream/release-12.z
 
         var result = new Dictionary<Guid, int>();
         foreach (var parentId in parentIds)
@@ -527,7 +563,15 @@ public class ItemCountService : IItemCountService
         return result;
     }
 
+<<<<<<< HEAD
     private static Dictionary<Guid, int> GetMergedChildCounts(JellyfinDbContext dbContext, IReadOnlyList<Guid> parentIds, bool includeVirtual)
+=======
+    private static Dictionary<Guid, int> GetMergedChildCounts(
+        JellyfinDbContext dbContext,
+        IQueryable<BaseItemEntity> accessibleItems,
+        IReadOnlyList<Guid> parentIds,
+        bool includeVirtual)
+>>>>>>> upstream/release-12.z
     {
         var mergedGroups = GetPresentationKeyGroups(dbContext, parentIds)
             .Where(group => group.Value.Count > 1)
@@ -540,14 +584,22 @@ public class ItemCountService : IItemCountService
 
         // Only merged folders.
         var memberIds = mergedGroups.SelectMany(group => group.Value).Distinct().ToArray();
+<<<<<<< HEAD
         var children = dbContext.BaseItems
             .AsNoTracking()
+=======
+        var children = accessibleItems
+>>>>>>> upstream/release-12.z
             .Where(b => b.ParentId.HasValue && !b.SeasonId.HasValue && (includeVirtual || !b.IsVirtualItem))
             .WhereOneOrMany(memberIds, b => b.ParentId!.Value)
             .Select(b => new { ParentId = b.ParentId!.Value, b.Id, b.PresentationUniqueKey })
             .ToArray()
+<<<<<<< HEAD
             .Concat(dbContext.BaseItems
                 .AsNoTracking()
+=======
+            .Concat(accessibleItems
+>>>>>>> upstream/release-12.z
                 .Where(b => b.SeasonId.HasValue && (includeVirtual || !b.IsVirtualItem))
                 .WhereOneOrMany(memberIds, b => b.SeasonId!.Value)
                 .Select(b => new { ParentId = b.SeasonId!.Value, b.Id, b.PresentationUniqueKey })
@@ -601,7 +653,7 @@ public class ItemCountService : IItemCountService
         leafItems = _queryHelpers.ApplyAccessFiltering(dbContext, leafItems, filter);
 
         var playedLeafItems = leafItems
-            .Select(b => new { b.Id, Played = b.UserData!.Any(ud => ud.UserId == userId && ud.Played) });
+            .Select(DescendantQueryHelper.PlayedStateBy(userId));
 
         var ancestorLeaves = dbContext.AncestorIds
             .WhereOneOrMany(folderIdsArray, a => a.ParentItemId)
@@ -719,7 +771,7 @@ public class ItemCountService : IItemCountService
     private static (int Played, int Total) GetPlayedAndTotalCountFromQuery(IQueryable<BaseItemEntity> query, Guid userId)
     {
         var result = query
-            .Select(b => b.UserData!.Any(u => u.UserId == userId && u.Played))
+            .Select(DescendantQueryHelper.IsPlayedBy(userId))
             .GroupBy(_ => 1)
             .OrderBy(g => g.Key)
             .Select(g => new
