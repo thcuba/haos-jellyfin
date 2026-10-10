@@ -65,15 +65,5 @@ namespace MediaBrowser.Controller.Entities
         /// people must satisfy through at least one of the items they are credited on.
         /// </summary>
         public InternalItemsQuery AccessFilter { get; set; }
-<<<<<<< HEAD
-=======
-
-        /// <summary>
-        /// Gets or sets a value indicating whether to keep only people that have a by-name item behind
-        /// them. Set by callers that hand back items rather than credits, so the count they report
-        /// describes the same people they can return.
-        /// </summary>
-        public bool MustHaveItem { get; set; }
->>>>>>> upstream/release-12.z
     }
 }

@@ -139,8 +139,7 @@ namespace Emby.Server.Implementations.Localization
                     var ratingSystem = await JsonSerializer.DeserializeAsync<ParentalRatingSystem>(stream, _jsonOptions).ConfigureAwait(false)
                                 ?? throw new InvalidOperationException($"Invalid resource path: '{CountriesPath}'");
 
-                    // Rating strings are compared case insensitively, providers are not consistent about casing (e.g. "VM18" vs "vm18")
-                    var dict = new Dictionary<string, ParentalRatingScore?>(StringComparer.OrdinalIgnoreCase);
+                    var dict = new Dictionary<string, ParentalRatingScore?>();
                     if (ratingSystem.Ratings is not null)
                     {
                         foreach (var ratingEntry in ratingSystem.Ratings)
@@ -375,7 +374,6 @@ namespace Emby.Server.Implementations.Localization
         {
             ArgumentException.ThrowIfNullOrEmpty(rating);
 
-<<<<<<< HEAD
             // Some providers may list multiple ratings separated by '/' (e.g. "SE:15 / SE:15+ / SE:Från 15 år").
             // Try each one in order and use the first that resolves.
             var ratingValues = rating.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -399,73 +397,10 @@ namespace Emby.Server.Implementations.Localization
         {
             // Handle unrated content
             if (_unratedValues.Contains(rating.AsSpan(), StringComparison.OrdinalIgnoreCase))
-=======
-            // Handle unrated content. This has to happen before the split below,
-            // because some of the unrated values contain a '/' themselves (e.g. "n/a").
-            if (IsUnrated(rating))
->>>>>>> upstream/release-12.z
             {
                 return null;
             }
 
-            // Several rating systems contain a '/' inside a single rating (e.g. "M/12" in PT,
-            // "U/A 13+" in IN, "7/i/fig" in ES), so the value as a whole always wins over the split below.
-            var wholeValueScore = GetSingleRatingScore(rating, countryCode);
-            if (wholeValueScore is not null)
-            {
-                return wholeValueScore;
-            }
-
-            // Some providers may list multiple ratings separated by '/' (e.g. "SE:15 / SE:15+ / SE:Från 15 år").
-            // Try each one in order and use the first that resolves.
-            var ratingValues = rating.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            if (ratingValues.Length == 1)
-            {
-                return null;
-            }
-
-            var hasUnknownRating = false;
-            foreach (var ratingValue in ratingValues)
-            {
-                // A single entry of such a list may be unrated while a later one still resolves
-                if (IsUnrated(ratingValue))
-                {
-                    continue;
-                }
-
-                // An unknown entry is not worth a warning of its own as long as another entry still resolves
-                var score = GetSingleRatingScore(ratingValue, countryCode, logUnknownRating: false);
-                if (score is not null)
-                {
-                    return score;
-                }
-
-                hasUnknownRating = true;
-            }
-
-            if (hasUnknownRating)
-            {
-                _logger.LogWarning(
-                    "None of the ratings in '{Rating}' were found in a known rating system, treating as unrated",
-                    rating);
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// Checks whether a rating value marks the content as unrated.
-        /// </summary>
-        /// <param name="rating">Rating value to check.</param>
-        /// <returns>Returns true if the value is an unrated marker.</returns>
-        private static bool IsUnrated(ReadOnlySpan<char> rating)
-            => _unratedValues.Contains(rating.Trim(), StringComparison.OrdinalIgnoreCase);
-
-        /// <summary>
-        /// Resolves a single rating value to a score.
-        /// </summary>
-        private ParentalRatingScore? GetSingleRatingScore(string rating, string? countryCode, bool logUnknownRating = true)
-        {
             // Convert ints directly
             // This may override some of the locale specific age ratings (but those always map to the same age)
             if (TryParseRatingAsScore(rating, out var ratingAge))
@@ -520,11 +455,9 @@ namespace Emby.Server.Implementations.Localization
                 }
             }
 
-            // Try splitting by country prefix separator to handle "US:PG-13", "Germany: FSK-18", "DE-FSK-18".
-            // A '/' marks a list of ratings, which this would split into the first entry's country and the last entry's rating
-            if (!rating.Contains('/', StringComparison.Ordinal)
-                && (TryGetRatingScoreBySeparator(rating, ':', logUnknownRating, out var result)
-                    || TryGetRatingScoreBySeparator(rating, '-', logUnknownRating, out result)))
+            // Try splitting by country prefix separator to handle "US:PG-13", "Germany: FSK-18", "DE-FSK-18"
+            if (TryGetRatingScoreBySeparator(rating, ':', out var result)
+                || TryGetRatingScoreBySeparator(rating, '-', out result))
             {
                 return result;
             }
@@ -532,7 +465,7 @@ namespace Emby.Server.Implementations.Localization
             return null;
         }
 
-        private bool TryGetRatingScoreBySeparator(string rating, char separator, bool logUnknownRating, out ParentalRatingScore? result)
+        private bool TryGetRatingScoreBySeparator(string rating, char separator, out ParentalRatingScore? result)
         {
             result = null;
 
@@ -579,26 +512,10 @@ namespace Emby.Server.Implementations.Localization
                     return true;
                 }
 
-<<<<<<< HEAD
                 _logger.LogWarning(
                     "Rating '{Rating}' not found in the '{CountryCode}' rating system, treating as unrated",
                     rating,
                     resolvedCountryCode);
-=======
-                // Explicitly unrated content (e.g. "IT-NR") is unrated by definition, not a lookup failure
-                if (IsUnrated(ratingPart))
-                {
-                    return true;
-                }
-
-                if (logUnknownRating)
-                {
-                    _logger.LogWarning(
-                        "Rating '{Rating}' not found in the '{CountryCode}' rating system, treating as unrated",
-                        rating,
-                        resolvedCountryCode);
-                }
->>>>>>> upstream/release-12.z
 
                 return true;
             }
@@ -610,24 +527,14 @@ namespace Emby.Server.Implementations.Localization
         }
 
         /// <summary>
-<<<<<<< HEAD
         /// Tries to parse a rating as a number, allowing an optional trailing '+' (e.g. "16" or "18+").
-=======
-        /// Tries to parse a rating as a number, allowing an optional trailing '+' (e.g. "16" or "18+")
-        /// or a leading '-' (e.g. the French "-12").
->>>>>>> upstream/release-12.z
         /// </summary>
         /// <param name="ratingValue">Rating value to parse.</param>
         /// <param name="score">Parsed score.</param>
         /// <returns>Returns true if parsing was successful.</returns>
         private static bool TryParseRatingAsScore(ReadOnlySpan<char> ratingValue, out int score)
         {
-<<<<<<< HEAD
             var trimmed = ratingValue.TrimEnd('+');
-=======
-            // A leading '-' marks a minimum age ("-12" is French for "not for under 12s"), never a negative score
-            var trimmed = ratingValue.TrimStart('-').TrimEnd('+');
->>>>>>> upstream/release-12.z
             return int.TryParse(trimmed, out score);
         }
 

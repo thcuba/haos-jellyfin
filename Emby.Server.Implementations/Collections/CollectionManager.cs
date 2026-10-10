@@ -9,7 +9,6 @@ using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Extensions;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller.Collections;
-using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Library;
@@ -115,7 +114,7 @@ namespace Emby.Server.Implementations.Collections
 
             _libraryManager.RootFolder.Children = null;
 
-            return FindFolders(path).FirstOrDefault();
+            return FindFolders(path).First();
         }
 
         internal string GetCollectionsFolderPath()
@@ -168,7 +167,7 @@ namespace Emby.Server.Implementations.Collections
 
             if (parentFolder is null)
             {
-                throw new InvalidOperationException("Unable to resolve the collections library folder, so the collection cannot be created.");
+                throw new ArgumentException(nameof(parentFolder));
             }
 
             var path = Path.Combine(parentFolder.Path, folderName);
@@ -236,7 +235,7 @@ namespace Emby.Server.Implementations.Collections
 
             List<BaseItem>? itemList = null;
 
-            var linkedChildrenList = collection.GetLinkedChildren(DtoOptions.StoredColumnsOnly);
+            var linkedChildrenList = collection.GetLinkedChildren();
             var currentLinkedChildrenIds = linkedChildrenList.Select(i => i.Id).ToList();
 
             foreach (var id in ids)

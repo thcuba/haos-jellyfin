@@ -381,9 +381,9 @@ namespace MediaBrowser.XbmcMetadata.Parsers
                             // and Enum.TryParse to parse MetadataField enums with zero string allocations or LINQ overhead.
                             var valSpan = val.AsSpan();
                             var lockedFields = new List<MetadataField>();
-                            foreach (var range in valSpan.Split('|'))
+                            foreach (var partSpan in valSpan.Split('|'))
                             {
-                                var part = valSpan[range].Trim();
+                                var part = partSpan.Trim();
                                 if (Enum.TryParse(part, true, out MetadataField field))
                                 {
                                     lockedFields.Add(field);
@@ -409,9 +409,9 @@ namespace MediaBrowser.XbmcMetadata.Parsers
                             // to avoid intermediate string array allocations and LINQ iterators.
                             var valSpan = val.AsSpan();
                             var locations = new List<string>();
-                            foreach (var range in valSpan.Split('/'))
+                            foreach (var partSpan in valSpan.Split('/'))
                             {
-                                var part = valSpan[range].Trim();
+                                var part = partSpan.Trim();
                                 if (!part.IsEmpty)
                                 {
                                     locations.Add(part.ToString());
@@ -473,9 +473,9 @@ namespace MediaBrowser.XbmcMetadata.Parsers
                             // Optimization: Use ReadOnlySpan<char> slicing with MemoryExtensions.Split('/')
                             // to eliminate string[] allocations and LINQ iterators.
                             var valSpan = val.AsSpan();
-                            foreach (var range in valSpan.Split('/'))
+                            foreach (var partSpan in valSpan.Split('/'))
                             {
-                                var part = valSpan[range].Trim();
+                                var part = partSpan.Trim();
                                 if (!part.IsEmpty)
                                 {
                                     itemResult.AddPerson(new PersonInfo { Name = part.ToString(), Type = PersonKind.Writer });
@@ -596,9 +596,9 @@ namespace MediaBrowser.XbmcMetadata.Parsers
                             // Optimization: Use ReadOnlySpan<char> slicing with MemoryExtensions.Split('/')
                             // to eliminate string[] allocations and LINQ iterators.
                             var valSpan = val.AsSpan();
-                            foreach (var range in valSpan.Split('/'))
+                            foreach (var partSpan in valSpan.Split('/'))
                             {
-                                var part = valSpan[range].Trim();
+                                var part = partSpan.Trim();
                                 if (!part.IsEmpty)
                                 {
                                     item.AddGenre(part.ToString());

@@ -3,28 +3,14 @@
     "supportsSubScores": false,
     "ratings": [
         {
-            "ratingStrings": ["SU", "SU-BO", "Semua Umur"],
+            "ratingStrings": ["SU"],
             "ratingScore": {
                 "score": 0,
                 "subScore": null
             }
         },
         {
-            "ratingStrings": ["P", "P2+", "P-BO", "Prasekolah"],
-            "ratingScore": {
-                "score": 2,
-                "subScore": null
-            }
-        },
-        {
-            "ratingStrings": ["A", "A7+", "A-BO", "Anak"],
-            "ratingScore": {
-                "score": 7,
-                "subScore": null
-            }
-        },
-        {
-            "ratingStrings": ["13+", "R", "R13+", "R-BO", "Remaja"],
+            "ratingStrings": ["13+"],
             "ratingScore": {
                 "score": 13,
                 "subScore": null
@@ -34,13 +20,6 @@
             "ratingStrings": ["17+"],
             "ratingScore": {
                 "score": 17,
-                "subScore": null
-            }
-        },
-        {
-            "ratingStrings": ["D", "D18+", "Dewasa"],
-            "ratingScore": {
-                "score": 18,
                 "subScore": null
             }
         },

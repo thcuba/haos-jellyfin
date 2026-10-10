@@ -127,11 +127,7 @@ namespace Emby.Server.Implementations.HttpServer
                 {
                     receiveResult = await _socket.ReceiveAsync(memory, cancellationToken).ConfigureAwait(false);
                 }
-<<<<<<< HEAD
                 catch (Exception ex) when (ex is WebSocketException or ObjectDisposedException or OperationCanceledException)
-=======
-                catch (Exception ex) when (IsConnectionGone(ex))
->>>>>>> upstream/release-12.z
                 {
                     // ObjectDisposedException/OperationCanceledException: the socket was torn
                     // down underneath us (e.g. by the keep-alive watchdog after the connection
@@ -162,15 +158,7 @@ namespace Emby.Server.Implementations.HttpServer
 
                 if (receiveResult.EndOfMessage)
                 {
-                    try
-                    {
-                        await ProcessInternal(pipe.Reader).ConfigureAwait(false);
-                    }
-                    catch (Exception ex) when (IsConnectionGone(ex))
-                    {
-                        _logger.LogWarning("WS {IP} error sending data: {Message}", RemoteEndPoint, ex.Message);
-                        break;
-                    }
+                    await ProcessInternal(pipe.Reader).ConfigureAwait(false);
                 }
             }
             while ((_socket.State == WebSocketState.Open || _socket.State == WebSocketState.Connecting)
@@ -182,23 +170,12 @@ namespace Emby.Server.Implementations.HttpServer
                 || _socket.State == WebSocketState.CloseReceived
                 || _socket.State == WebSocketState.CloseSent)
             {
-                try
-                {
-                    await _socket.CloseAsync(
-                        WebSocketCloseStatus.NormalClosure,
-                        string.Empty,
-                        cancellationToken).ConfigureAwait(false);
-                }
-                catch (Exception ex) when (IsConnectionGone(ex))
-                {
-                    // The peer is already gone, there is nobody left to send the close frame to.
-                    _logger.LogDebug("WS {IP} error closing connection: {Message}", RemoteEndPoint, ex.Message);
-                }
+                await _socket.CloseAsync(
+                    WebSocketCloseStatus.NormalClosure,
+                    string.Empty,
+                    cancellationToken).ConfigureAwait(false);
             }
         }
-
-        private static bool IsConnectionGone(Exception ex)
-            => ex is WebSocketException or ObjectDisposedException or OperationCanceledException;
 
         private async Task ProcessInternal(PipeReader reader)
         {

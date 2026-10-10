@@ -29,7 +29,6 @@ namespace Jellyfin.Server.Integration.Tests
     {
         private static readonly string _testPathRoot = Path.Combine(Path.GetTempPath(), "jellyfin-test-data");
         private readonly ConcurrentBag<IDisposable> _disposableComponents = new ConcurrentBag<IDisposable>();
-        private readonly string _webHostPathRoot;
 
         /// <summary>
         /// Initializes static members of the <see cref="JellyfinApplicationFactory"/> class.
@@ -41,23 +40,6 @@ namespace Jellyfin.Server.Integration.Tests
                 .WriteTo.Console(formatProvider: CultureInfo.InvariantCulture)
                 .CreateLogger();
             StartupHelpers.PerformStaticInitialization();
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="JellyfinApplicationFactory"/> class using a new temporary directory.
-        /// </summary>
-        public JellyfinApplicationFactory()
-            : this(Path.Combine(_testPathRoot, "test-host-" + Path.GetFileNameWithoutExtension(Path.GetRandomFileName())))
-        {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="JellyfinApplicationFactory"/> class.
-        /// </summary>
-        /// <param name="webHostPathRoot">The directory the application paths are created in. Reusing it starts the same server again.</param>
-        protected JellyfinApplicationFactory(string webHostPathRoot)
-        {
-            _webHostPathRoot = webHostPathRoot;
         }
 
         /// <inheritdoc/>
@@ -75,7 +57,7 @@ namespace Jellyfin.Server.Integration.Tests
             var commandLineOpts = new StartupOptions();
 
             // Use a temporary directory for the application paths
-            var webHostPathRoot = _webHostPathRoot;
+            var webHostPathRoot = Path.Combine(_testPathRoot, "test-host-" + Path.GetFileNameWithoutExtension(Path.GetRandomFileName()));
             Directory.CreateDirectory(Path.Combine(webHostPathRoot, "logs"));
             Directory.CreateDirectory(Path.Combine(webHostPathRoot, "config"));
             Directory.CreateDirectory(Path.Combine(webHostPathRoot, "cache"));

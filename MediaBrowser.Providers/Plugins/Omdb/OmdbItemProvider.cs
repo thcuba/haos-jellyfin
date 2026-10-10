@@ -13,6 +13,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Extensions.Json;
 using MediaBrowser.Common.Net;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Entities;
@@ -44,7 +45,9 @@ namespace MediaBrowser.Providers.Plugins.Omdb
             _libraryManager = libraryManager;
             _omdbProvider = new OmdbProvider(_httpClientFactory, fileSystem, configurationManager);
 
-            _jsonOptions = OmdbProvider.CreateJsonOptions();
+            _jsonOptions = new JsonSerializerOptions(JsonDefaults.Options);
+            _jsonOptions.Converters.Add(new JsonOmdbNotAvailableStringConverter());
+            _jsonOptions.Converters.Add(new JsonOmdbNotAvailableInt32Converter());
         }
 
         public string Name => "The Open Movie Database";

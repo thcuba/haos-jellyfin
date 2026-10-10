@@ -1,10 +1,5 @@
 using System;
 using System.Collections.Generic;
-<<<<<<< HEAD
-=======
-using System.Linq;
-using System.Threading;
->>>>>>> upstream/release-12.z
 using Emby.Server.Implementations.Library;
 using Jellyfin.Database.Implementations;
 using Jellyfin.Database.Implementations.Entities;
@@ -13,10 +8,6 @@ using Jellyfin.Database.Providers.Sqlite;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Model.Configuration;
-<<<<<<< HEAD
-=======
-using MediaBrowser.Model.Entities;
->>>>>>> upstream/release-12.z
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -217,46 +208,6 @@ public sealed class UserDataManagerTests : IDisposable
     }
 
     [Fact]
-<<<<<<< HEAD
-=======
-    public void SaveUserData_RowUnderRetiredKey_IsKeptInAgreement()
-    {
-        var item = CreateAudioBook();
-
-        using (var ctx = CreateDbContext())
-        {
-            ctx.Users.Add(_user);
-            ctx.BaseItems.Add(new BaseItemEntity { Id = item.Id, Type = typeof(AudioBook).FullName! });
-            ctx.UserData.Add(CreateUserDataRow(item, "Author-Old Album-0001Old File Name", 111));
-            ctx.SaveChanges();
-        }
-
-        _userDataManager.SaveUserData(
-            _user,
-            item,
-            new UserItemData { Key = item.GetUserDataKeys()[0], Played = true },
-            UserDataSaveReason.UpdateUserRating,
-            CancellationToken.None);
-
-        using (var ctx = CreateDbContext())
-        {
-            var rows = ctx.UserData.Where(e => e.ItemId.Equals(item.Id)).ToList();
-
-            // The retired-key row is what a re-added item reattaches by, so it survives, but it must
-            // not keep a playback position that holds the item in Continue Watching.
-            Assert.Equal(
-                item.GetUserDataKeys().Append("Author-Old Album-0001Old File Name").OrderBy(e => e, StringComparer.Ordinal),
-                rows.Select(e => e.CustomDataKey).OrderBy(e => e, StringComparer.Ordinal));
-            Assert.All(rows, row =>
-            {
-                Assert.True(row.Played);
-                Assert.Equal(0, row.PlaybackPositionTicks);
-            });
-        }
-    }
-
-    [Fact]
->>>>>>> upstream/release-12.z
     public void GetUserData_NullUser_ThrowsArgumentNullException()
     {
         var item = CreateAudioBook();

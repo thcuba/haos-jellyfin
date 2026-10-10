@@ -9,7 +9,6 @@ using Jellyfin.Extensions;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using LinkedChildType = Jellyfin.Database.Implementations.Entities.LinkedChildType;
@@ -27,10 +26,6 @@ internal class MigrateLinkedChildren : IDatabaseMigrationRoutine
     private const int FileCheckProgressLogStep = 10_000;
     private const int ResolveProgressLogStep = 10_000;
     private const int DeleteProgressLogStep = 25;
-<<<<<<< HEAD
-=======
-    private const string CollectionFolderTypeName = "MediaBrowser.Controller.Entities.CollectionFolder";
->>>>>>> upstream/release-12.z
 
     private readonly ILogger<MigrateLinkedChildren> _logger;
     private readonly IDbContextFactory<JellyfinDbContext> _dbProvider;
@@ -420,23 +415,8 @@ internal class MigrateLinkedChildren : IDatabaseMigrationRoutine
         // An item outside every library location is normally left over from a removed media path, but
         // it looks exactly the same as one whose storage failed to mount (a wrong bind mount on the
         // first container start, for example). Only act on it while every location is readable.
-<<<<<<< HEAD
         var canRemoveUnrootedItems = inaccessiblePaths.Count == 0;
         var skippedUnrootedItems = 0;
-=======
-        // Resolving no locations at all is the same hazard with none of the evidence: it cannot be
-        // told apart from an install that has libraries the server has not read yet, and acting on it
-        // means every file-backed item in the database is outside every location.
-        var canRemoveUnrootedItems = inaccessiblePaths.Count == 0 && allLibraryPaths.Count > 0;
-        var skippedUnrootedItems = 0;
-        var removedUnrootedItems = 0;
-
-        // One library losing its definition folder is the same accident confined to that library: it
-        // contributes no locations, so everything it held reads as unrooted while the other libraries
-        // still look healthy enough to act on.
-        var itemsInMissingLibraries = GetItemsInMissingLibraries(context, virtualFolders);
-        var skippedMissingLibraryItems = 0;
->>>>>>> upstream/release-12.z
 
         var staleIds = new List<Guid>();
         var checkedCount = 0;
@@ -479,23 +459,10 @@ internal class MigrateLinkedChildren : IDatabaseMigrationRoutine
             {
                 // Item is not under ANY library location (accessible or not) —
                 // it's orphaned from all libraries (e.g. media path was removed from config)
-<<<<<<< HEAD
                 if (canRemoveUnrootedItems)
                 {
                     _logger.LogDebug("Removing item {ItemId}: path {Path} is outside every library location.", item.Id, path);
                     staleIds.Add(item.Id);
-=======
-                if (itemsInMissingLibraries.Contains(item.Id))
-                {
-                    // Its library is the thing that went missing, not its media path.
-                    skippedMissingLibraryItems++;
-                }
-                else if (canRemoveUnrootedItems)
-                {
-                    _logger.LogDebug("Removing item {ItemId}: path {Path} is outside every library location.", item.Id, path);
-                    staleIds.Add(item.Id);
-                    removedUnrootedItems++;
->>>>>>> upstream/release-12.z
                 }
                 else
                 {
@@ -506,38 +473,12 @@ internal class MigrateLinkedChildren : IDatabaseMigrationRoutine
             // Otherwise: item is under an inaccessible location — skip (storage may be offline)
         }
 
-<<<<<<< HEAD
         if (skippedUnrootedItems > 0)
         {
             _logger.LogWarning(
                 "Keeping {Count} items that are outside every library location because {LocationCount} library location(s) are currently unavailable.",
                 skippedUnrootedItems,
                 inaccessiblePaths.Count);
-=======
-        if (skippedMissingLibraryItems > 0)
-        {
-            _logger.LogWarning(
-                "Keeping {Count} items whose library definition is missing from {Path}. Restore the definition or recreate the library; the items are kept meanwhile.",
-                skippedMissingLibraryItems,
-                _appPaths.DefaultUserViewsPath);
-        }
-
-        if (skippedUnrootedItems > 0)
-        {
-            if (allLibraryPaths.Count == 0)
-            {
-                _logger.LogWarning(
-                    "Keeping {Count} items that are outside every library location because this server resolved no library locations at all.",
-                    skippedUnrootedItems);
-            }
-            else
-            {
-                _logger.LogWarning(
-                    "Keeping {Count} items that are outside every library location because {LocationCount} library location(s) are currently unavailable.",
-                    skippedUnrootedItems,
-                    inaccessiblePaths.Count);
-            }
->>>>>>> upstream/release-12.z
         }
 
         if (staleIds.Count == 0)
@@ -546,53 +487,13 @@ internal class MigrateLinkedChildren : IDatabaseMigrationRoutine
             return;
         }
 
-        // Whether an item went because its own file is gone or because nothing claims its path is the
-        // difference between a handful of deletions and a whole library, so report the split.
-        _logger.LogInformation(
-            "Found {Count} stale items to remove, {UnrootedCount} of them because their path is outside every library location.",
-            staleIds.Count,
-            removedUnrootedItems);
+        _logger.LogInformation("Found {Count} stale items to remove.", staleIds.Count);
 
         var deleted = ResolveAndDeleteItems(staleIds, "items with missing files");
 
         _logger.LogInformation("Removed {Count} stale items.", deleted);
     }
 
-<<<<<<< HEAD
-=======
-    // Items under a library whose definition folder is gone. Their locations cannot be resolved, so
-    // they read as unrooted, but the library is what went missing and the media path is still theirs.
-    private HashSet<Guid> GetItemsInMissingLibraries(JellyfinDbContext context, IReadOnlyList<VirtualFolderInfo> virtualFolders)
-    {
-        var liveLibraryPaths = virtualFolders
-            .Select(folder => Path.Combine(_appPaths.DefaultUserViewsPath, folder.Name))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        var missingLibraryIds = context.BaseItems
-            .Where(b => b.Type == CollectionFolderTypeName && b.Path != null)
-            .Select(b => new { b.Id, b.Path })
-            .ToList()
-            .Where(b => !liveLibraryPaths.Contains(_appHost.ExpandVirtualPath(b.Path!)))
-            .Select(b => b.Id)
-            .ToList();
-
-        if (missingLibraryIds.Count == 0)
-        {
-            return [];
-        }
-
-        _logger.LogWarning(
-            "{Count} library definition(s) known to the database are not in {Path}.",
-            missingLibraryIds.Count,
-            _appPaths.DefaultUserViewsPath);
-
-        return context.AncestorIds
-            .WhereOneOrMany(missingLibraryIds, a => a.ParentItemId)
-            .Select(a => a.ItemId)
-            .ToHashSet();
-    }
-
->>>>>>> upstream/release-12.z
     private int ResolveAndDeleteItems(IReadOnlyCollection<Guid> ids, string description)
     {
         if (ids.Count == 0)

@@ -11,19 +11,27 @@ namespace Jellyfin.Server.Implementations.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.Sql("""
-                WITH RECURSIVE Orphan ("Id") AS (
-                    SELECT Child."Id"
-                    FROM "BaseItems" AS Child
-                    WHERE Child."ParentId" IS NOT NULL
-                      AND NOT EXISTS (SELECT 1 FROM "BaseItems" AS Parent WHERE Parent."Id" = Child."ParentId")
-                    UNION
-                    SELECT Descendant."Id"
-                    FROM "BaseItems" AS Descendant
-                    INNER JOIN Orphan ON Descendant."ParentId" = Orphan."Id"
-                )
-                DELETE FROM "BaseItems" WHERE "Id" IN (SELECT "Id" FROM Orphan);
-                """);
-
+DELETE FROM BaseItems
+        WHERE
+        ParentId IS NOT NULL
+        AND
+        NOT EXISTS(SELECT 1 FROM BaseItems parent WHERE parent.Id = BaseItems.ParentId);
+DELETE FROM BaseItems
+        WHERE
+        ParentId IS NOT NULL
+        AND
+        NOT EXISTS(SELECT 1 FROM BaseItems parent WHERE parent.Id = BaseItems.ParentId);
+DELETE FROM BaseItems
+        WHERE
+        ParentId IS NOT NULL
+        AND
+        NOT EXISTS(SELECT 1 FROM BaseItems parent WHERE parent.Id = BaseItems.ParentId);
+DELETE FROM BaseItems
+        WHERE
+        ParentId IS NOT NULL
+        AND
+        NOT EXISTS(SELECT 1 FROM BaseItems parent WHERE parent.Id = BaseItems.ParentId);
+""");
             migrationBuilder.AddForeignKey(
                 name: "FK_BaseItems_BaseItems_ParentId",
                 table: "BaseItems",

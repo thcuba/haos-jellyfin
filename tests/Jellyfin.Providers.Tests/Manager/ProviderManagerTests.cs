@@ -677,11 +677,6 @@ namespace Jellyfin.Providers.Tests.Manager
                 var libraryManagerMock = new Mock<ILibraryManager>(MockBehavior.Strict);
                 libraryManagerMock.Setup(i => i.GetLibraryOptions(It.IsAny<BaseItem>()))
                     .Returns(libraryOptions ?? new LibraryOptions());
-<<<<<<< HEAD
-=======
-                libraryManagerMock.Setup(i => i.GetCollectionFolders(It.IsAny<BaseItem>()))
-                    .Returns(new List<Folder>());
->>>>>>> upstream/release-12.z
                 libraryManager = libraryManagerMock.Object;
             }
 

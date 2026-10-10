@@ -13,6 +13,9 @@ namespace MediaBrowser.Controller.Extensions;
 /// </summary>
 public static class XmlReaderExtensions
 {
+    private static readonly char[] CommaSeparator = [','];
+    private static readonly char[] PipeSemicolonSeparators = ['|', ';'];
+
     /// <summary>
     /// Reads a trimmed string from the current node.
     /// </summary>
@@ -169,12 +172,18 @@ public static class XmlReaderExtensions
         // We have to be careful to not split names like Matthew, Jr.
         ReadOnlySpan<char> separator = !value.Contains('|', StringComparison.Ordinal)
             && !value.Contains(';', StringComparison.Ordinal)
-                ? stackalloc[] { ',' }
-                : stackalloc[] { '|', ';' };
+                ? CommaSeparator
+                : PipeSemicolonSeparators;
 
         // Optimization: Iterate through span slices using IndexOfAny and ReadOnlySpan<char>.Trim() instead of
         // .ToString().Split() which allocates intermediate string objects and a string[] array on the heap.
         var span = value.AsSpan().Trim().Trim(separator);
+        if (span.IsEmpty)
+        {
+            return Array.Empty<string>();
+        }
+
+        var result = new List<string>();
         while (!span.IsEmpty)
         {
             var index = span.IndexOfAny(separator);
@@ -193,9 +202,11 @@ public static class XmlReaderExtensions
             partSpan = partSpan.Trim();
             if (!partSpan.IsEmpty && !partSpan.IsWhiteSpace())
             {
-                yield return partSpan.ToString();
+                result.Add(partSpan.ToString());
             }
         }
+
+        return result;
     }
 
     /// <summary>

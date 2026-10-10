@@ -556,16 +556,6 @@ public class SkiaEncoder : IImageEncoder
     /// <returns>The resized image.</returns>
     internal static SKImage ResizeImage(SKBitmap source, SKImageInfo targetInfo, bool isAntialias = false, bool isDither = false)
     {
-<<<<<<< HEAD
-=======
-        if (source.Width == targetInfo.Width && source.Height == targetInfo.Height)
-        {
-            return SKImage.FromBitmap(source);
-        }
-
-        var isDownscale = source.Width > targetInfo.Width || source.Height > targetInfo.Height;
-
->>>>>>> upstream/release-12.z
         using var target = new SKBitmap(targetInfo);
         using var canvas = new SKCanvas(target);
         using var paint = new SKPaint();
@@ -575,7 +565,7 @@ public class SkiaEncoder : IImageEncoder
         // Historically, kHigh implied cubic filtering, but only when upsampling.
         // If specified kHigh, and were down-sampling, Skia used to switch back to kMedium (bilinear filtering plus mipmaps).
         // With current skia API, passing Mitchell cubic when down-sampling will cause serious quality degradation.
-        var samplingOptions = isDownscale
+        var samplingOptions = source.Width > targetInfo.Width || source.Height > targetInfo.Height
             ? DefaultSamplingOptions
             : UpscaleSamplingOptions;
 
@@ -586,14 +576,7 @@ public class SkiaEncoder : IImageEncoder
             samplingOptions,
             paint);
 
-<<<<<<< HEAD
         SharpenInPlace(target);
-=======
-        if (isDownscale)
-        {
-            SharpenInPlace(target);
-        }
->>>>>>> upstream/release-12.z
 
         return SKImage.FromBitmap(target);
     }

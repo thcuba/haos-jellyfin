@@ -34,23 +34,25 @@ namespace Emby.Naming.Video
 
         private static Format3DResult Parse(ReadOnlySpan<char> path, ReadOnlySpan<char> delimiters, NamingOptions namingOptions)
         {
-            // Optimization: Tokenize path once into stack-allocated span buffer.
+            // Optimization: Tokenize path once into stack-allocated Range buffer.
             // This avoids re-scanning and re-slicing the path string for every 3D format rule (O(N) single-pass tokenization instead of O(N * R)).
-            Span<ReadOnlySpan<char>> tokens = stackalloc ReadOnlySpan<char>[128];
+            Span<Range> tokens = stackalloc Range[128];
             int tokenCount = 0;
 
+            int currentOffset = 0;
             ReadOnlySpan<char> remaining = path;
             while (remaining.Length > 0 && tokenCount < tokens.Length)
             {
                 var index = remaining.IndexOfAny(delimiters);
                 if (index == -1)
                 {
-                    tokens[tokenCount++] = remaining;
+                    tokens[tokenCount++] = new Range(currentOffset, currentOffset + remaining.Length);
                     remaining = default;
                     break;
                 }
 
-                tokens[tokenCount++] = remaining[..index];
+                tokens[tokenCount++] = new Range(currentOffset, currentOffset + index);
+                currentOffset += index + 1;
                 remaining = remaining[(index + 1)..];
             }
 
@@ -68,7 +70,7 @@ namespace Emby.Naming.Video
 
                 for (int i = 0; i < tokenCount; i++)
                 {
-                    var currentSlice = tokens[i];
+                    var currentSlice = path[tokens[i]];
                     if (!foundPrefix)
                     {
                         foundPrefix = currentSlice.Equals(rule.PrecedingToken, StringComparison.OrdinalIgnoreCase);
@@ -111,10 +113,6 @@ namespace Emby.Naming.Video
                 ReadOnlySpan<char> currentSlice;
                 if (index == -1)
                 {
-<<<<<<< HEAD
-=======
-                    // No delimiter left, the last token is the remainder of the path
->>>>>>> upstream/release-12.z
                     currentSlice = path;
                     path = default;
                 }

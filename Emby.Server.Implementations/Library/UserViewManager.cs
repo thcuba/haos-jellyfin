@@ -62,11 +62,12 @@ namespace Emby.Server.Implementations.Library
                 // Playlist and BoxSet libraries require special handling because the folder only references linked items
                 if (folderViewType == CollectionType.playlists || folderViewType == CollectionType.boxsets)
                 {
-                    var itemKind = folderViewType == CollectionType.playlists
-                        ? BaseItemKind.Playlist
-                        : BaseItemKind.BoxSet;
+                    var items = folder.GetItemList(new InternalItemsQuery(user)
+                    {
+                        ParentId = folder.ParentId
+                    });
 
-                    if (!HasVisibleItem(itemKind, folders, user))
+                    if (!items.Any(item => item.IsVisible(user)))
                     {
                         continue;
                     }
@@ -126,7 +127,7 @@ namespace Emby.Server.Implementations.Library
 
                 list.AddRange(channels);
 
-                if (_liveTvManager.IsEnabledForUser(user))
+                if (_liveTvManager.GetEnabledUsers().Select(i => i.Id).Contains(user.Id))
                 {
                     list.Add(_liveTvManager.GetInternalLiveTvFolder(CancellationToken.None));
                 }
@@ -156,32 +157,6 @@ namespace Emby.Server.Implementations.Library
                 .ThenBy(sorted.IndexOf)
                 .ThenBy(i => i.SortName)
                 .ToArray();
-        }
-
-        private bool HasVisibleItem(BaseItemKind itemKind, IReadOnlyList<Folder> folders, User user)
-        {
-            var topParentIds = folders.SelectMany(GetTopParentIds).ToArray();
-            if (topParentIds.Length == 0)
-            {
-                return false;
-            }
-
-            var items = _libraryManager.GetItemList(new InternalItemsQuery(user)
-            {
-                IncludeItemTypes = [itemKind],
-                TopParentIds = topParentIds,
-                GroupByPresentationUniqueKey = false,
-                DtoOptions = DtoOptions.StoredColumnsOnly
-            });
-
-            return items.Any(item => item.IsVisible(user));
-        }
-
-        private static IEnumerable<Guid> GetTopParentIds(Folder folder)
-        {
-            return folder is CollectionFolder collectionFolder && collectionFolder.PhysicalFolderIds.Length > 0
-                ? collectionFolder.PhysicalFolderIds
-                : [folder.Id];
         }
 
         public UserView GetUserSubViewWithName(string name, Guid parentId, CollectionType? type, string sortName)

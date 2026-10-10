@@ -372,7 +372,9 @@ namespace Jellyfin.LiveTv.Channels
         {
             IEnumerable<MediaSourceInfo> results = GetSavedMediaSources(item);
 
-            return NormalizeMediaSources(item, results);
+            return results
+                .Select(i => NormalizeMediaSource(item, i))
+                .ToList();
         }
 
         /// <summary>
@@ -398,7 +400,9 @@ namespace Jellyfin.LiveTv.Channels
                 results = Enumerable.Empty<MediaSourceInfo>();
             }
 
-            return NormalizeMediaSources(item, results);
+            return results
+                .Select(i => NormalizeMediaSource(item, i))
+                .ToList();
         }
 
         private async Task<IEnumerable<MediaSourceInfo>> GetChannelItemMediaSourcesInternal(IRequiresMediaInfoCallback channel, string id, CancellationToken cancellationToken)
@@ -416,36 +420,11 @@ namespace Jellyfin.LiveTv.Channels
             return list;
         }
 
-        private static IReadOnlyList<MediaSourceInfo> NormalizeMediaSources(BaseItem item, IEnumerable<MediaSourceInfo> infos)
+        private static MediaSourceInfo NormalizeMediaSource(BaseItem item, MediaSourceInfo info)
         {
-            var list = infos.ToList();
-            var itemId = item.Id.ToString("N", CultureInfo.InvariantCulture);
-            var hasDefaultSource = list.Any(i => string.Equals(i.Id, itemId, StringComparison.OrdinalIgnoreCase));
+            info.RunTimeTicks ??= item.RunTimeTicks;
 
-            for (var index = 0; index < list.Count; index++)
-            {
-                var info = list[index];
-                info.RunTimeTicks ??= item.RunTimeTicks;
-
-                if (!string.IsNullOrEmpty(info.Id))
-                {
-                    continue;
-                }
-
-                if (!hasDefaultSource)
-                {
-                    // The source carrying the item id sorts first and becomes the client's default.
-                    info.Id = itemId;
-                    hasDefaultSource = true;
-                    continue;
-                }
-
-                // Remaining sources need ids that are distinct but stable, as clients send them back to request playback.
-                var key = string.IsNullOrEmpty(info.Path) ? index.ToString(CultureInfo.InvariantCulture) : info.Path;
-                info.Id = (itemId + key).GetMD5().ToString("N", CultureInfo.InvariantCulture);
-            }
-
-            return list;
+            return info;
         }
 
         private async Task<Channel> GetChannel(IChannel channelInfo, CancellationToken cancellationToken)

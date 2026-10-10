@@ -185,9 +185,9 @@ namespace MediaBrowser.LocalMetadata.Parsers
                             // and Enum.TryParse to parse MetadataField enums with zero string allocations or LINQ overhead.
                             var valSpan = val.AsSpan();
                             var lockedFields = new List<MetadataField>();
-                            foreach (var range in valSpan.Split('|'))
+                            foreach (var partSpan in valSpan.Split('|'))
                             {
-                                var part = valSpan[range].Trim();
+                                var part = partSpan.Trim();
                                 if (Enum.TryParse(part, true, out MetadataField field))
                                 {
                                     lockedFields.Add(field);

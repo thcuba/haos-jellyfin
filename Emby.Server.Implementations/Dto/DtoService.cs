@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using Jellyfin.Data;
 using Jellyfin.Data.Enums;
 using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Extensions;
@@ -189,7 +188,6 @@ namespace Emby.Server.Implementations.Dto
             // Batch-fetch by-name item counts to avoid N+1 queries
             Dictionary<Guid, ItemCounts>? itemCountsBatch = null;
             if (options.ContainsField(ItemFields.ItemCounts))
-<<<<<<< HEAD
             {
                 itemCountsBatch = GetItemCountsBatch(accessibleItems, user);
             }
@@ -203,17 +201,6 @@ namespace Emby.Server.Implementations.Dto
                 {
                     childCountBatch = _libraryManager.GetChildCountBatch(folderIds, user);
                 }
-=======
-            {
-                itemCountsBatch = GetItemCountsBatch(accessibleItems, user);
-            }
-
-            // Batch-fetch child counts for all folders to avoid N+1 queries.
-            Dictionary<Guid, int>? childCountBatch = null;
-            if (user is not null && options.ContainsField(ItemFields.ChildCount))
-            {
-                childCountBatch = GetChildCountBatch(accessibleItems, user);
->>>>>>> upstream/release-12.z
             }
 
             // Batch-fetch played/total counts for all folders to avoid N+1 queries
@@ -727,108 +714,24 @@ namespace Emby.Server.Implementations.Dto
             };
         }
 
-        private Dictionary<Guid, int>? GetChildCountBatch(IReadOnlyList<BaseItem> items, User user)
+        private static int GetChildCount(Folder folder, User user, Dictionary<Guid, int>? childCountBatch)
         {
-            Dictionary<Guid, IReadOnlyList<Guid>>? sources = null;
-            foreach (var folder in items.OfType<Folder>())
+            // Right now this is too slow to calculate for top level folders on a per-user basis
+            // Just return something so that apps that are expecting a value won't think the folders are empty
+            if (folder is ICollectionFolder || folder is UserView)
             {
-                var sourceIds = GetChildCountSourceIds(folder, user);
-                if (sourceIds.Count > 0)
-                {
-                    (sources ??= new Dictionary<Guid, IReadOnlyList<Guid>>())[folder.Id] = sourceIds;
-                }
+                return Random.Shared.Next(1, 10);
             }
 
-            if (sources is null)
-            {
-                return null;
-            }
-
-            var counts = _libraryManager.GetChildCountBatch(
-                sources.Values.SelectMany(ids => ids).Distinct().ToList(),
-                user);
-
-            var result = new Dictionary<Guid, int>(sources.Count);
-            foreach (var (folderId, sourceIds) in sources)
-            {
-                var total = 0;
-                foreach (var sourceId in sourceIds)
-                {
-                    total += counts.GetValueOrDefault(sourceId);
-                }
-
-                result[folderId] = total;
-            }
-
-            return result;
-        }
-
-        private IReadOnlyList<Guid> GetChildCountSourceIds(Folder folder, User user)
-        {
-            if (folder is CollectionFolder collectionFolder)
-            {
-                return collectionFolder.PhysicalFolderIds;
-            }
-
-            if (folder is not UserView view)
-            {
-                return [folder.Id];
-            }
-
-            // Only a view that stands for a library proxies it. The sub-views a movie or show view
-            // is built from hang off the same library but hold a query, not the library's children.
-            if (!UserView.EnableOriginalFolder(view.ViewType)
-                && view.ViewType is not (CollectionType.movies or CollectionType.tvshows))
-            {
-                return [];
-            }
-
-            // A view over a single library proxies that library, whatever the view type.
-            var parentId = view.DisplayParentId.IsEmpty() ? view.ParentId : view.DisplayParentId;
-            if (!parentId.IsEmpty()
-                && !parentId.Equals(view.Id)
-                && _libraryManager.GetItemById(parentId) is Folder parent
-                && parent is not UserView)
-            {
-                return GetChildCountSourceIds(parent, user);
-            }
-
-            // A grouped view has no single parent: it stands for every library the user grouped
-            // into it, the same set UserViewManager builds the view from.
-            if (view.ViewType is CollectionType.movies or CollectionType.tvshows)
-            {
-                return _libraryManager.GetUserRootFolder()
-                    .GetChildren(user, true)
-                    .OfType<CollectionFolder>()
-                    .Where(f => user.IsFolderGrouped(f.Id)
-                        && (f.CollectionType == view.ViewType || f.CollectionType is null))
-                    .SelectMany(f => f.PhysicalFolderIds)
-                    .Distinct()
-                    .ToList();
-            }
-
-            return [];
-        }
-
-        private int GetChildCount(Folder folder, User user, Dictionary<Guid, int>? childCountBatch)
-        {
             // Use pre-fetched batch data if available
             if (childCountBatch is not null && childCountBatch.TryGetValue(folder.Id, out var count))
             {
                 return count;
             }
 
-<<<<<<< HEAD
             // Only reached when no batch was computed: the batch holds an entry for every folder it
             // was asked about, zero included.
             return folder.GetChildCount(user);
-=======
-            // No batch covered this folder.
-            var single = GetChildCountBatch([folder], user);
-            return single is not null && single.TryGetValue(folder.Id, out var singleCount)
-                ? singleCount
-                : folder.GetChildCount(user);
->>>>>>> upstream/release-12.z
         }
 
         private static void SetBookProperties(BaseItemDto dto, Book item)
