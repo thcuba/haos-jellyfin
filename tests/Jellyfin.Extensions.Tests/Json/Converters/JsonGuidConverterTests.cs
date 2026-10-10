@@ -30,6 +30,13 @@ namespace Jellyfin.Extensions.Tests.Json.Converters
         }
 
         [Fact]
+        public void Deserialize_ValidBraced_Success()
+        {
+            Guid value = JsonSerializer.Deserialize<Guid>(@"""{e9b2dcaa-529c-426e-9433-5e9981f27f2e}""", _options);
+            Assert.Equal(new Guid("e9b2dcaa-529c-426e-9433-5e9981f27f2e"), value);
+        }
+
+        [Fact]
         public void Roundtrip_Valid_Success()
         {
             Guid guid = new Guid("a852a27afe324084ae66db579ee3ee18");
