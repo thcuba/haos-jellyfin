@@ -338,16 +338,48 @@ public class SeriesMetadataService : MetadataService<Series, SeriesInfo>
             .Select(e => e.ParentIndexNumber >= 0 ? e.ParentIndexNumber : null)
             .Distinct();
 
+        var seasonsByNumberLookup = new Dictionary<int, Season>();
+        Season? nullSeason = null;
+        foreach (var season in seasons)
+        {
+            if (season.IndexNumber.HasValue)
+            {
+                seasonsByNumberLookup.TryAdd(season.IndexNumber.Value, season);
+            }
+            else if (nullSeason is null)
+            {
+                nullSeason = season;
+            }
+        }
+
         // Loop through the unique season numbers
         foreach (var seasonNumber in uniqueSeasonNumbers)
         {
             // Null season numbers will have a 'dummy' season created because seasons are always required.
-            var existingSeason = seasons.FirstOrDefault(i => i.IndexNumber == seasonNumber);
+            Season? existingSeason = null;
+            if (seasonNumber.HasValue)
+            {
+                seasonsByNumberLookup.TryGetValue(seasonNumber.Value, out existingSeason);
+            }
+            else
+            {
+                existingSeason = nullSeason;
+            }
+
             if (existingSeason is null)
             {
                 var seasonName = GetValidSeasonNameForSeries(series, null, seasonNumber);
                 var season = await CreateSeasonAsync(series, seasonName, seasonNumber, cancellationToken).ConfigureAwait(false);
                 seasons.Add(season);
+
+                if (seasonNumber.HasValue)
+                {
+                    seasonsByNumberLookup.TryAdd(seasonNumber.Value, season);
+                }
+                else
+                {
+                    nullSeason = season;
+                }
             }
             else if (existingSeason.IsVirtualItem)
             {
