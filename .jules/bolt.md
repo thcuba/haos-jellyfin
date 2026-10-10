@@ -93,3 +93,9 @@
 **Learning:** Parsing delimited string fields in metadata parsers using `val.Split('|')` or `val.Split('/')` with LINQ queries (`.Select()`, `.Where()`, `.OfType()`) allocates intermediate `string[]` arrays, token strings, delegate closures, and LINQ iterator objects per element during library scans. Using `MemoryExtensions.Split()` on `ReadOnlySpan<char>` slices tokens with zero string allocations and allows parsing enums directly via `Enum.TryParse<T>(partSpan, ignoreCase: true, out var field)`.
 
 **Action:** Use `MemoryExtensions.Split()` on `ReadOnlySpan<char>` for delimited string field parsing in metadata XML/NFO readers to eliminate heap array and string allocations.
+
+## 2026-10-05 - Deferred string materialization in CleanStringParser
+
+**Learning:** Calling `testFilename.ToString()` on a `ReadOnlySpan<char>` before passing it to regex helpers like `CleanStringParser.TryClean` allocates heap string objects regardless of whether the expression collection or input span is empty. Accepting `ReadOnlySpan<char>` in `CleanStringParser.TryClean` and deferring string materialization (`current ??= name.ToString()`) until actual regex evaluation eliminates string allocations on empty inputs, empty expression lists, and early exits.
+
+**Action:** Accept `ReadOnlySpan<char>` parameters in string-cleaning parser overloads and defer `string` conversion until regex evaluation is actually required.
