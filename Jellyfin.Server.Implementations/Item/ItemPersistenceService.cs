@@ -328,15 +328,18 @@ public class ItemPersistenceService : IItemPersistenceService
             .Select(f => (f.Item, Values: f.Values.Select(e => itemValuesStore[(e.MagicNumber, e.Value)]).DistinctBy(e => e.ItemValueId).ToArray()))
             .ToArray();
 
-        var mappedValues = context.ItemValuesMap.Where(e => ids.Contains(e.ItemId)).ToList();
+        var mappedValues = context.ItemValuesMap.Where(e => ids.Contains(e.ItemId)).ToLookup(e => e.ItemId);
 
         foreach (var item in valueMap)
         {
-            var itemMappedValues = mappedValues.Where(e => e.ItemId == item.Item.Id).ToList();
+            var itemMappedValuesDict = mappedValues[item.Item.Id].ToDictionary(e => e.ItemValueId);
             foreach (var itemValue in item.Values)
             {
-                var existingItem = itemMappedValues.FirstOrDefault(f => f.ItemValueId == itemValue.ItemValueId);
-                if (existingItem is null)
+                if (itemMappedValuesDict.Remove(itemValue.ItemValueId, out var existingItem))
+                {
+                    // Exists
+                }
+                else
                 {
                     context.ItemValuesMap.Add(new ItemValueMap()
                     {
@@ -346,13 +349,12 @@ public class ItemPersistenceService : IItemPersistenceService
                         ItemValueId = itemValue.ItemValueId
                     });
                 }
-                else
-                {
-                    itemMappedValues.Remove(existingItem);
-                }
             }
 
-            context.ItemValuesMap.RemoveRange(itemMappedValues);
+            if (itemMappedValuesDict.Count > 0)
+            {
+                context.ItemValuesMap.RemoveRange(itemMappedValuesDict.Values);
+            }
         }
 
         var itemsWithAncestors = tuples
