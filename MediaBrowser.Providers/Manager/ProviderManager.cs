@@ -1047,7 +1047,7 @@ namespace MediaBrowser.Providers.Manager
         {
             return GetExternalIds(item)
                 .Select(i => new ExternalIdInfo(
-                    name: i.ProviderName,
+                    providerName: i.ProviderName,
                     key: i.Key,
                     type: i.Type));
         }
