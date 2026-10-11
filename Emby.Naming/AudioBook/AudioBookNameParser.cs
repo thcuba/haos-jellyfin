@@ -27,13 +27,25 @@ namespace Emby.Naming.AudioBook
         /// <returns>Returns <see cref="AudioBookNameParserResult"/> object.</returns>
         public AudioBookNameParserResult Parse(string name)
         {
+            if (string.IsNullOrEmpty(name))
+            {
+                return default;
+            }
+
             AudioBookNameParserResult result = default;
+
+            // Optimization: Break early once both Name and Year are matched
+            // to avoid running remaining expressions unnecessarily.
             var regexes = _options.AudioBookNamesRegexes;
             if (regexes.Length > 0)
             {
                 foreach (var regex in regexes)
                 {
                     ProcessMatch(regex.Match(name), ref result);
+                    if (result.Name is not null && result.Year.HasValue)
+                    {
+                        break;
+                    }
                 }
             }
             else
@@ -41,6 +53,10 @@ namespace Emby.Naming.AudioBook
                 foreach (var expression in _options.AudioBookNamesExpressions)
                 {
                     ProcessMatch(Regex.Match(name, expression, RegexOptions.IgnoreCase), ref result);
+                    if (result.Name is not null && result.Year.HasValue)
+                    {
+                        break;
+                    }
                 }
             }
 

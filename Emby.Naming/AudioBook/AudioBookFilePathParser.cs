@@ -28,14 +28,30 @@ namespace Emby.Naming.AudioBook
         /// <returns>Returns <see cref="AudioBookFilePathParser"/> object.</returns>
         public AudioBookFilePathParserResult Parse(string path)
         {
+            if (string.IsNullOrEmpty(path))
+            {
+                return default;
+            }
+
             AudioBookFilePathParserResult result = default;
             var fileName = Path.GetFileNameWithoutExtension(path);
+            if (string.IsNullOrEmpty(fileName))
+            {
+                return default;
+            }
+
+            // Optimization: Break early once both ChapterNumber and PartNumber are matched
+            // to avoid running remaining expressions unnecessarily during audiobook scanning.
             var regexes = _options.AudioBookPartsRegexes;
             if (regexes.Length > 0)
             {
                 foreach (var regex in regexes)
                 {
                     ProcessMatch(regex.Match(fileName), ref result);
+                    if (result.ChapterNumber.HasValue && result.PartNumber.HasValue)
+                    {
+                        break;
+                    }
                 }
             }
             else
@@ -43,6 +59,10 @@ namespace Emby.Naming.AudioBook
                 foreach (var expression in _options.AudioBookPartsExpressions)
                 {
                     ProcessMatch(Regex.Match(fileName, expression, RegexOptions.IgnoreCase), ref result);
+                    if (result.ChapterNumber.HasValue && result.PartNumber.HasValue)
+                    {
+                        break;
+                    }
                 }
             }
 

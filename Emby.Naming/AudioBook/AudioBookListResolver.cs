@@ -73,7 +73,12 @@ namespace Emby.Naming.AudioBook
 
             var haveChaptersOrPages = stackFiles.Any(x => x.ChapterNumber is not null || x.PartNumber is not null);
             var groupedBy = stackFiles.GroupBy(file => new { file.ChapterNumber, file.PartNumber });
-            var nameWithReplacedDots = nameParserResult.Name.Replace(' ', '.');
+
+            // Optimization: Only construct dot-replaced name if the audiobook name contains spaces,
+            // avoiding redundant string allocations and duplicate Contains lookups.
+            var nameWithReplacedDots = nameParserResult.Name.Contains(' ')
+                ? nameParserResult.Name.Replace(' ', '.')
+                : null;
 
             foreach (var group in groupedBy)
             {
@@ -89,7 +94,7 @@ namespace Emby.Naming.AudioBook
                             var name = Path.GetFileNameWithoutExtension(audioFile.Path.AsSpan());
                             if (name.Equals("audiobook", StringComparison.OrdinalIgnoreCase)
                                 || name.Contains(nameParserResult.Name, StringComparison.OrdinalIgnoreCase)
-                                || name.Contains(nameWithReplacedDots, StringComparison.OrdinalIgnoreCase))
+                                || (nameWithReplacedDots is not null && name.Contains(nameWithReplacedDots, StringComparison.OrdinalIgnoreCase)))
                             {
                                 (alt ??= new()).Add(audioFile);
                             }
@@ -138,7 +143,7 @@ namespace Emby.Naming.AudioBook
             }
         }
 
-        private AudioBookFileInfo FindMainAudioBookFile(List<AudioBookFileInfo> files, string name)
+        private static AudioBookFileInfo FindMainAudioBookFile(List<AudioBookFileInfo> files, string name)
         {
             // Optimization: Use Path.GetFileNameWithoutExtension(x.Path.AsSpan()) to compare file names on ReadOnlySpan<char> without heap string allocations.
             var main = files.Find(x => Path.GetFileNameWithoutExtension(x.Path.AsSpan()).Equals(name, StringComparison.OrdinalIgnoreCase));
