@@ -99,3 +99,9 @@
 **Learning:** Calling `testFilename.ToString()` on a `ReadOnlySpan<char>` before passing it to regex helpers like `CleanStringParser.TryClean` allocates heap string objects regardless of whether the expression collection or input span is empty. Accepting `ReadOnlySpan<char>` in `CleanStringParser.TryClean` and deferring string materialization (`current ??= name.ToString()`) until actual regex evaluation eliminates string allocations on empty inputs, empty expression lists, and early exits.
 
 **Action:** Accept `ReadOnlySpan<char>` parameters in string-cleaning parser overloads and defer `string` conversion until regex evaluation is actually required.
+
+## 2026-10-06 - Early regex loop termination in AudioBook parsers
+
+**Learning:** Continuing regex expression loops in `AudioBookFilePathParser` and `AudioBookNameParser` after all target properties (`ChapterNumber` & `PartNumber` or `Name` & `Year`) are populated executes redundant `Regex.Match` calls on remaining patterns that cannot affect the result. Breaking early as soon as all target fields are populated eliminates unnecessary regex engine evaluations during audiobook library scans. Additionally, conditionally replacing spaces in strings (`name.Contains(' ') ? name.Replace(' ', '.') : null`) in `AudioBookListResolver` avoids heap string allocations and duplicate `Contains` checks when no spaces exist.
+
+**Action:** Add early break guards inside regex evaluation loops once all target match properties are populated, and condition string replacements on character existence.
