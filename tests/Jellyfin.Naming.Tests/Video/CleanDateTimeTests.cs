@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using Emby.Naming.Common;
 using Emby.Naming.Video;
@@ -61,6 +62,11 @@ namespace Jellyfin.Naming.Tests.Video
 
             Assert.Equal(expectedName, result.Name, true);
             Assert.Equal(expectedYear, result.Year);
+
+            var resultSpan = VideoResolver.CleanDateTime(input.AsSpan(), _namingOptions);
+
+            Assert.Equal(expectedName, resultSpan.Name, true);
+            Assert.Equal(expectedYear, resultSpan.Year);
         }
     }
 }
