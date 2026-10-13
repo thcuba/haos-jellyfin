@@ -11,6 +11,36 @@ namespace Emby.Naming.Video
     public static class CleanDateTimeParser
     {
         /// <summary>
+        /// Attempts to clean the name span.
+        /// </summary>
+        /// <param name="name">Name of video as span.</param>
+        /// <param name="cleanDateTimeRegexes">Optional list of regexes to clean the name.</param>
+        /// <returns>Returns <see cref="CleanDateTimeResult"/> object.</returns>
+        public static CleanDateTimeResult Clean(ReadOnlySpan<char> name, IReadOnlyList<Regex> cleanDateTimeRegexes)
+        {
+            if (name.IsEmpty)
+            {
+                return new CleanDateTimeResult(string.Empty);
+            }
+
+            // Optimization: Defer string materialization until regex execution,
+            // avoiding heap string allocation when inputs or regex collections are empty.
+            string? current = null;
+
+            var len = cleanDateTimeRegexes.Count;
+            for (int i = 0; i < len; i++)
+            {
+                current ??= name.ToString();
+                if (TryClean(current, cleanDateTimeRegexes[i], out var result))
+                {
+                    return result;
+                }
+            }
+
+            return new CleanDateTimeResult(current ?? name.ToString());
+        }
+
+        /// <summary>
         /// Attempts to clean the name.
         /// </summary>
         /// <param name="name">Name of video.</param>
@@ -18,25 +48,24 @@ namespace Emby.Naming.Video
         /// <returns>Returns <see cref="CleanDateTimeResult"/> object.</returns>
         public static CleanDateTimeResult Clean(string name, IReadOnlyList<Regex> cleanDateTimeRegexes)
         {
-            CleanDateTimeResult result = new CleanDateTimeResult(name);
             if (string.IsNullOrEmpty(name))
             {
-                return result;
+                return new CleanDateTimeResult(name);
             }
 
             var len = cleanDateTimeRegexes.Count;
             for (int i = 0; i < len; i++)
             {
-                if (TryClean(name, cleanDateTimeRegexes[i], ref result))
+                if (TryClean(name, cleanDateTimeRegexes[i], out var result))
                 {
                     return result;
                 }
             }
 
-            return result;
+            return new CleanDateTimeResult(name);
         }
 
-        private static bool TryClean(string name, Regex expression, ref CleanDateTimeResult result)
+        private static bool TryClean(string name, Regex expression, out CleanDateTimeResult result)
         {
             var match = expression.Match(name);
 
@@ -51,6 +80,7 @@ namespace Emby.Naming.Video
                 return true;
             }
 
+            result = default;
             return false;
         }
     }

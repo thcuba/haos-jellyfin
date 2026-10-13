@@ -86,7 +86,8 @@ namespace Emby.Naming.Video
 
             if (parseName)
             {
-                var cleanDateTimeResult = CleanDateTime(name, namingOptions);
+                // Optimization: Pass ReadOnlySpan<char> filename directly to CleanDateTime to avoid string allocation
+                var cleanDateTimeResult = CleanDateTime(Path.GetFileNameWithoutExtension(path.AsSpan()), namingOptions);
                 name = cleanDateTimeResult.Name;
                 year = cleanDateTimeResult.Year;
 
@@ -144,6 +145,17 @@ namespace Emby.Naming.Video
         public static bool TryCleanString([NotNullWhen(true)] string? name, NamingOptions namingOptions, out string newName)
         {
             return CleanStringParser.TryClean(name, namingOptions.CleanStringRegexes, out newName);
+        }
+
+        /// <summary>
+        /// Tries to get name and year from raw name span.
+        /// </summary>
+        /// <param name="name">Raw name span.</param>
+        /// <param name="namingOptions">The naming options.</param>
+        /// <returns>Returns <see cref="CleanDateTimeResult"/> with name and optional year.</returns>
+        public static CleanDateTimeResult CleanDateTime(ReadOnlySpan<char> name, NamingOptions namingOptions)
+        {
+            return CleanDateTimeParser.Clean(name, namingOptions.CleanDateTimeRegexes);
         }
 
         /// <summary>
