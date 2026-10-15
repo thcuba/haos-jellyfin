@@ -84,57 +84,49 @@ namespace Emby.Naming.ExternalFiles
                     var currentSliceSpan = languageString.AsSpan(lastSeparator);
                     var currentSliceWithoutSeparatorSpan = currentSliceSpan[SeparatorLength..];
 
-                    // Optimization: Use ReadOnlySpan<char> flag matching and slice operations to eliminate
-                    // intermediate string allocations and LINQ delegate/enumerator allocations during flag parsing.
+                    // Optimization: Use ReadOnlySpan<char> flag matching and string.Remove at lastSeparator to eliminate
+                    // intermediate string allocations and string.Replace search overhead during flag parsing.
                     if (ContainsFlag(currentSliceWithoutSeparatorSpan, _namingOptions.MediaDefaultFlags))
                     {
                         pathInfo.IsDefault = true;
-                        var currentSlice = currentSliceSpan.ToString();
-                        extraString = extraString.Replace(currentSlice, string.Empty, StringComparison.OrdinalIgnoreCase);
-                        languageString = languageString[..lastSeparator];
-                        continue;
+                        extraString = extraString.Remove(lastSeparator, currentSliceSpan.Length);
                     }
-
-                    if (ContainsFlag(currentSliceWithoutSeparatorSpan, _namingOptions.MediaForcedFlags))
+                    else if (ContainsFlag(currentSliceWithoutSeparatorSpan, _namingOptions.MediaForcedFlags))
                     {
                         pathInfo.IsForced = true;
-                        var currentSlice = currentSliceSpan.ToString();
-                        extraString = extraString.Replace(currentSlice, string.Empty, StringComparison.OrdinalIgnoreCase);
-                        languageString = languageString[..lastSeparator];
-                        continue;
-                    }
-
-                    // Try to translate to three character code
-                    var currentSliceWithoutSeparator = currentSliceWithoutSeparatorSpan.ToString();
-                    var culture = _localizationManager.FindLanguageInfo(currentSliceWithoutSeparator);
-
-                    if (culture is not null && pathInfo.Language is null)
-                    {
-                        pathInfo.Language = culture.Name.Contains('-', StringComparison.OrdinalIgnoreCase)
-                                          ? culture.Name
-                                          : culture.ThreeLetterISOLanguageName;
-                        var currentSlice = currentSliceSpan.ToString();
-                        extraString = extraString.Replace(currentSlice, string.Empty, StringComparison.OrdinalIgnoreCase);
-                    }
-                    else if (culture is not null && pathInfo.Language == "hin")
-                    {
-                        // Hindi language code "hi" collides with a hearing impaired flag - use as Hindi only if no other language is set
-                        pathInfo.IsHearingImpaired = true;
-                        pathInfo.Language = culture.Name.Contains('-', StringComparison.OrdinalIgnoreCase)
-                                          ? culture.Name
-                                          : culture.ThreeLetterISOLanguageName;
-                        var currentSlice = currentSliceSpan.ToString();
-                        extraString = extraString.Replace(currentSlice, string.Empty, StringComparison.OrdinalIgnoreCase);
-                    }
-                    else if (EqualsFlag(currentSliceWithoutSeparatorSpan, _namingOptions.MediaHearingImpairedFlags))
-                    {
-                        pathInfo.IsHearingImpaired = true;
-                        var currentSlice = currentSliceSpan.ToString();
-                        extraString = extraString.Replace(currentSlice, string.Empty, StringComparison.OrdinalIgnoreCase);
+                        extraString = extraString.Remove(lastSeparator, currentSliceSpan.Length);
                     }
                     else
                     {
-                        titleString = currentSliceSpan.ToString() + titleString;
+                        // Try to translate to three character code
+                        var currentSliceWithoutSeparator = currentSliceWithoutSeparatorSpan.ToString();
+                        var culture = _localizationManager.FindLanguageInfo(currentSliceWithoutSeparator);
+
+                        if (culture is not null && pathInfo.Language is null)
+                        {
+                            pathInfo.Language = culture.Name.Contains('-', StringComparison.OrdinalIgnoreCase)
+                                              ? culture.Name
+                                              : culture.ThreeLetterISOLanguageName;
+                            extraString = extraString.Remove(lastSeparator, currentSliceSpan.Length);
+                        }
+                        else if (culture is not null && pathInfo.Language == "hin")
+                        {
+                            // Hindi language code "hi" collides with a hearing impaired flag - use as Hindi only if no other language is set
+                            pathInfo.IsHearingImpaired = true;
+                            pathInfo.Language = culture.Name.Contains('-', StringComparison.OrdinalIgnoreCase)
+                                              ? culture.Name
+                                              : culture.ThreeLetterISOLanguageName;
+                            extraString = extraString.Remove(lastSeparator, currentSliceSpan.Length);
+                        }
+                        else if (EqualsFlag(currentSliceWithoutSeparatorSpan, _namingOptions.MediaHearingImpairedFlags))
+                        {
+                            pathInfo.IsHearingImpaired = true;
+                            extraString = extraString.Remove(lastSeparator, currentSliceSpan.Length);
+                        }
+                        else
+                        {
+                            titleString = currentSliceSpan.ToString() + titleString;
+                        }
                     }
 
                     languageString = languageString[..lastSeparator];
