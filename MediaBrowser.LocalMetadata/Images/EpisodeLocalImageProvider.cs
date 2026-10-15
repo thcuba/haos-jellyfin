@@ -38,7 +38,7 @@ namespace MediaBrowser.LocalMetadata.Images
             }
 
             var parentPathFiles = directoryService.GetFiles(parentPath);
-            var nameWithoutExtension = Path.GetFileNameWithoutExtension(item.Path.AsSpan()).ToString();
+            var nameWithoutExtension = Path.GetFileNameWithoutExtension(item.Path.AsSpan());
 
             var images = GetImageFilesFromFolder(nameWithoutExtension, parentPathFiles);
 
@@ -55,7 +55,6 @@ namespace MediaBrowser.LocalMetadata.Images
         private List<LocalImageInfo> GetImageFilesFromFolder(ReadOnlySpan<char> filenameWithoutExtension, List<FileSystemMetadata> filePaths)
         {
             var list = new List<LocalImageInfo>(1);
-            var thumbName = string.Concat(filenameWithoutExtension, "-thumb");
 
             foreach (var i in filePaths)
             {
@@ -72,7 +71,10 @@ namespace MediaBrowser.LocalMetadata.Images
                     {
                         list.Add(new LocalImageInfo { FileInfo = i, Type = ImageType.Primary });
                     }
-                    else if (currentNameWithoutExtension.Equals(thumbName, StringComparison.OrdinalIgnoreCase))
+                    // Optimization: Check for "-thumb" suffix using span operations to avoid string.Concat heap allocation.
+                    else if (currentNameWithoutExtension.Length == filenameWithoutExtension.Length + 6
+                        && currentNameWithoutExtension.EndsWith("-thumb", StringComparison.OrdinalIgnoreCase)
+                        && currentNameWithoutExtension.StartsWith(filenameWithoutExtension, StringComparison.OrdinalIgnoreCase))
                     {
                         list.Add(new LocalImageInfo { FileInfo = i, Type = ImageType.Primary });
                     }
