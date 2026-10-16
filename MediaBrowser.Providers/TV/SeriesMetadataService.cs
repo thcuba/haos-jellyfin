@@ -112,6 +112,17 @@ public class SeriesMetadataService : MetadataService<Series, SeriesInfo>
         var children = series.GetRecursiveChildren(i => i is Season || i is Episode);
         var seasons = children.OfType<Season>().ToList();
 
+        // Performance optimization: Pre-build a dictionary of seasons by IndexNumber to avoid O(S) linear search
+        // (via seasons.Find) and delegate closure allocations for every episode in children during child reconciliation.
+        var seasonsByNumberLookup = new Dictionary<int, Season>();
+        foreach (var season in seasons)
+        {
+            if (season.IndexNumber.HasValue)
+            {
+                seasonsByNumberLookup.TryAdd(season.IndexNumber.Value, season);
+            }
+        }
+
         foreach (var child in children)
         {
             var updateType = ItemUpdateType.None;
@@ -126,9 +137,9 @@ public class SeriesMetadataService : MetadataService<Series, SeriesInfo>
             if (child is Episode episode)
             {
                 var seasonId = episode.FindSeasonId();
-                if (seasonId.IsEmpty() && episode.ParentIndexNumber.HasValue)
+                if (seasonId.IsEmpty() && episode.ParentIndexNumber.HasValue && seasonsByNumberLookup.TryGetValue(episode.ParentIndexNumber.Value, out var targetSeason))
                 {
-                    seasonId = seasons.Find(s => s.IndexNumber == episode.ParentIndexNumber)?.Id ?? Guid.Empty;
+                    seasonId = targetSeason.Id;
                 }
 
                 if (!seasonId.IsEmpty() && !episode.SeasonId.Equals(seasonId))
