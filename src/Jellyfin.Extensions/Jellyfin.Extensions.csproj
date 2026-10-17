@@ -31,7 +31,7 @@
 
   <ItemGroup>
     <PackageReference Include="Diacritics" />
-    <PackageReference Include="ICU4N.Transliterator" />
+    <PackageReference Include="ICU4N.Transliterator" VersionOverride="60.1.0-alpha.356" />
   </ItemGroup>
 
 </Project>
