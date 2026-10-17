@@ -11,6 +11,10 @@ using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Model.Configuration;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+<<<<<<< HEAD
+=======
+using Microsoft.EntityFrameworkCore.Diagnostics;
+>>>>>>> upstream/release-12.z
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
@@ -26,7 +30,11 @@ public abstract class SqliteDbTestFixture : IDisposable
     private readonly SqliteConnection _connection;
     private readonly DbContextOptions<JellyfinDbContext> _dbOptions;
 
+<<<<<<< HEAD
     protected SqliteDbTestFixture()
+=======
+    protected SqliteDbTestFixture(params IInterceptor[] interceptors)
+>>>>>>> upstream/release-12.z
     {
         ApplicationPaths = new Mock<IApplicationPaths>().Object;
 
@@ -35,6 +43,10 @@ public abstract class SqliteDbTestFixture : IDisposable
 
         _dbOptions = new DbContextOptionsBuilder<JellyfinDbContext>()
             .UseSqlite(_connection)
+<<<<<<< HEAD
+=======
+            .AddInterceptors(interceptors)
+>>>>>>> upstream/release-12.z
             .Options;
 
         using var context = CreateDbContext();

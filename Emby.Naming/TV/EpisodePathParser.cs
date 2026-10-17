@@ -237,7 +237,32 @@ namespace Emby.Naming.TV
 
             if (!info.EndingEpisodeNumber.HasValue && result.EndingEpisodeNumber >= info.EpisodeNumber)
             {
+<<<<<<< HEAD
                 info.EndingEpisodeNumber = result.EndingEpisodeNumber;
+=======
+                var result = Parse(path, i);
+
+                if (!result.Success)
+                {
+                    continue;
+                }
+
+                if (string.IsNullOrEmpty(info.SeriesName))
+                {
+                    info.SeriesName = result.SeriesName;
+                }
+
+                if (!info.EndingEpisodeNumber.HasValue && result.EndingEpisodeNumber >= info.EpisodeNumber)
+                {
+                    info.EndingEpisodeNumber = result.EndingEpisodeNumber;
+                }
+
+                if (!string.IsNullOrEmpty(info.SeriesName)
+                    && (!info.EpisodeNumber.HasValue || info.EndingEpisodeNumber.HasValue))
+                {
+                    break;
+                }
+>>>>>>> upstream/release-12.z
             }
 
             return !string.IsNullOrEmpty(info.SeriesName)

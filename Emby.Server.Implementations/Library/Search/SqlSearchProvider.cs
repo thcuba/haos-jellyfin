@@ -10,6 +10,10 @@ using Jellyfin.Data.Enums;
 using Jellyfin.Database.Implementations;
 using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Extensions;
+<<<<<<< HEAD
+=======
+using MediaBrowser.Controller.Configuration;
+>>>>>>> upstream/release-12.z
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Persistence;
@@ -36,6 +40,10 @@ public class SqlSearchProvider : IInternalSearchProvider
     private readonly ILibraryManager _libraryManager;
     private readonly IUserManager _userManager;
     private readonly IItemQueryHelpers _queryHelpers;
+<<<<<<< HEAD
+=======
+    private readonly IServerConfigurationManager _configurationManager;
+>>>>>>> upstream/release-12.z
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SqlSearchProvider"/> class.
@@ -45,18 +53,31 @@ public class SqlSearchProvider : IInternalSearchProvider
     /// <param name="libraryManager">The library manager.</param>
     /// <param name="userManager">The user manager.</param>
     /// <param name="queryHelpers">The shared item query helpers.</param>
+<<<<<<< HEAD
+=======
+    /// <param name="configurationManager">The configuration manager.</param>
+>>>>>>> upstream/release-12.z
     public SqlSearchProvider(
         IDbContextFactory<JellyfinDbContext> dbProvider,
         IItemTypeLookup itemTypeLookup,
         ILibraryManager libraryManager,
         IUserManager userManager,
+<<<<<<< HEAD
         IItemQueryHelpers queryHelpers)
+=======
+        IItemQueryHelpers queryHelpers,
+        IServerConfigurationManager configurationManager)
+>>>>>>> upstream/release-12.z
     {
         _dbProvider = dbProvider;
         _itemTypeLookup = itemTypeLookup;
         _libraryManager = libraryManager;
         _userManager = userManager;
         _queryHelpers = queryHelpers;
+<<<<<<< HEAD
+=======
+        _configurationManager = configurationManager;
+>>>>>>> upstream/release-12.z
     }
 
     /// <inheritdoc/>
@@ -98,6 +119,15 @@ public class SqlSearchProvider : IInternalSearchProvider
         // so match it via a case-insensitive LIKE rather than a per-row case conversion
         // that may not translate to SQL on every provider.
         var likeOriginal = $"%{rawSearchTerm}%";
+<<<<<<< HEAD
+=======
+
+        // Great benefit for users with metadata in non-latin script
+        // since SortName is among other things stored transliterated.
+        var sortNameShape = BaseItem.GetSortName(rawSearchTerm, true, _configurationManager.Configuration);
+        var likeSortName = string.IsNullOrWhiteSpace(sortNameShape) ? null : $"%{sortNameShape}%";
+
+>>>>>>> upstream/release-12.z
         var limit = query.Limit ?? DefaultSearchLimit;
 
         var dbContext = await _dbProvider.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
@@ -107,14 +137,36 @@ public class SqlSearchProvider : IInternalSearchProvider
             var dbQuery = dbContext.BaseItems
                 .AsNoTracking()
                 .Where(e => e.Id != _placeholderId)
+<<<<<<< HEAD
                 .Where(e => !e.IsVirtualItem)
                 .Where(e => e.CleanName!.Contains(cleanSearchTerm)
                     || (e.OriginalTitle != null && EF.Functions.Like(e.OriginalTitle, likeOriginal)));
+=======
+                .Where(e => !e.IsVirtualItem);
+
+            if (likeSortName is null)
+            {
+                dbQuery = dbQuery
+                    .Where(e => e.CleanName!.Contains(cleanSearchTerm)
+                        || (e.OriginalTitle != null && EF.Functions.Like(e.OriginalTitle, likeOriginal)));
+            }
+            else
+            {
+                dbQuery = dbQuery
+                    .Where(e => e.CleanName!.Contains(cleanSearchTerm)
+                        || (e.OriginalTitle != null && EF.Functions.Like(e.OriginalTitle, likeOriginal))
+                        || (e.SortName != null && EF.Functions.Like(e.SortName, likeSortName)));
+            }
+>>>>>>> upstream/release-12.z
 
             dbQuery = ApplyTypeFilter(dbQuery, query.IncludeItemTypes, query.ExcludeItemTypes);
             dbQuery = ApplyMediaTypeFilter(dbQuery, query.MediaTypes);
             dbQuery = ApplyParentFilter(dbQuery, query.ParentId);
             dbQuery = ApplyUserAccessFilter(dbContext, dbQuery, query);
+<<<<<<< HEAD
+=======
+            dbQuery = ExcludeVersionsOfMatchedPrimaries(dbQuery);
+>>>>>>> upstream/release-12.z
 
             // Compute the score in SQL: the ternary translates to a CASE WHEN. CleanName is
             // the pre-normalized (lowercase, diacritic-stripped) form, so we score against it
@@ -193,6 +245,15 @@ public class SqlSearchProvider : IInternalSearchProvider
         return query.Where(e => e.ParentId == pid || e.Parents!.Any(p => p.ParentItemId == pid));
     }
 
+<<<<<<< HEAD
+=======
+    private static IQueryable<BaseItemEntity> ExcludeVersionsOfMatchedPrimaries(IQueryable<BaseItemEntity> query)
+    {
+        var matched = query;
+        return query.Where(e => e.PrimaryVersionId == null || !matched.Any(p => p.Id == e.PrimaryVersionId));
+    }
+
+>>>>>>> upstream/release-12.z
     private IQueryable<BaseItemEntity> ApplyUserAccessFilter(
         JellyfinDbContext dbContext,
         IQueryable<BaseItemEntity> query,

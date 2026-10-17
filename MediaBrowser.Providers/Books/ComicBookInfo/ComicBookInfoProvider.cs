@@ -54,9 +54,16 @@ public class ComicBookInfoProvider : IComicProvider
                 var archive = await ZipArchive.CreateAsync(stream, ZipArchiveMode.Read, false, null, cancellationToken).ConfigureAwait(false);
                 await using (archive.ConfigureAwait(false))
                 {
+<<<<<<< HEAD
                     if (archive.Comment is null)
                     {
                         _logger.LogInformation("missing ComicBookInfo in archive comment: {Path}", info.Path);
+=======
+                    // ZipArchive.Comment is an empty string, not null, when the archive has no comment
+                    if (string.IsNullOrWhiteSpace(archive.Comment))
+                    {
+                        _logger.LogDebug("missing ComicBookInfo in archive comment: {Path}", info.Path);
+>>>>>>> upstream/release-12.z
                         return new MetadataResult<Book> { HasMetadata = false };
                     }
 
@@ -71,6 +78,15 @@ public class ComicBookInfoProvider : IComicProvider
                 }
             }
         }
+<<<<<<< HEAD
+=======
+        catch (JsonException ex)
+        {
+            // the archive comment is not reserved for ComicBookInfo, so any other content is not an error
+            _logger.LogDebug("archive comment is not valid ComicBookInfo metadata: {Path}: {Message}", info.Path, ex.Message);
+            return new MetadataResult<Book> { HasMetadata = false };
+        }
+>>>>>>> upstream/release-12.z
         catch (Exception ex)
         {
             _logger.LogError(ex, "failed to load ComicBookInfo metadata: {Path}", info.Path);

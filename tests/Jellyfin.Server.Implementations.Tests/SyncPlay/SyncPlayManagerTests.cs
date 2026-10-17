@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+<<<<<<< HEAD
 using Jellyfin.Database.Implementations.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Session;
@@ -7,6 +8,20 @@ using MediaBrowser.Controller.SyncPlay.Requests;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+=======
+using System.Threading.Tasks;
+using Jellyfin.Database.Implementations.Entities;
+using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Session;
+using MediaBrowser.Controller.SyncPlay.PlaybackRequests;
+using MediaBrowser.Controller.SyncPlay.Requests;
+using MediaBrowser.Model.SyncPlay;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using Xunit;
+using SyncPlayGroup = Emby.Server.Implementations.SyncPlay.Group;
+>>>>>>> upstream/release-12.z
 using SyncPlayManager = Emby.Server.Implementations.SyncPlay.SyncPlayManager;
 
 namespace Jellyfin.Server.Implementations.Tests.SyncPlay;
@@ -55,11 +70,40 @@ public class SyncPlayManagerTests
         Assert.False(harness.Manager.IsUserActive(harness.User.Id));
     }
 
+<<<<<<< HEAD
+=======
+    [Fact]
+    public async Task HandleRequest_GroupWaitsForAMemberThatNeverReportsReady_RecoversOnItsOwn()
+    {
+        var harness = new ManagerHarness(groupWaitTimeout: 200);
+        var second = harness.CreateSession("session-2");
+
+        var info = harness.Manager.NewGroup(harness.Session, new NewGroupRequest("group"), CancellationToken.None);
+        harness.Manager.JoinGroup(second, new JoinGroupRequest(info.GroupId), CancellationToken.None);
+
+        // Starting playback puts the group behind the ready barrier.
+        harness.Manager.HandleRequest(
+            harness.Session,
+            new PlayGroupRequest(new[] { Guid.NewGuid() }, 0, 0),
+            CancellationToken.None);
+        Assert.Equal(GroupStateType.Waiting, harness.Manager.GetGroup(harness.Session, info.GroupId).State);
+
+        // Neither session ever reports ready, so the group has to come out of the wait by itself.
+        Assert.Equal(
+            GroupStateType.Playing,
+            await harness.WaitForState(harness.Session, info.GroupId, GroupStateType.Playing));
+    }
+
+>>>>>>> upstream/release-12.z
     private sealed class ManagerHarness
     {
         private readonly Mock<ISessionManager> _sessionManager = new();
 
+<<<<<<< HEAD
         public ManagerHarness()
+=======
+        public ManagerHarness(long? groupWaitTimeout = null)
+>>>>>>> upstream/release-12.z
         {
             var userManager = new Mock<IUserManager>();
             var libraryManager = new Mock<ILibraryManager>();
@@ -67,11 +111,33 @@ public class SyncPlayManagerTests
             User = new User("tester", "auth-provider", "pwdreset-provider");
             userManager.Setup(m => m.GetUserById(It.IsAny<Guid>())).Returns(User);
 
+<<<<<<< HEAD
+=======
+            var item = new Mock<BaseItem>();
+            item.Setup(i => i.IsVisibleStandalone(It.IsAny<User>())).Returns(true);
+            item.Object.RunTimeTicks = TimeSpan.FromHours(2).Ticks;
+            libraryManager.Setup(m => m.GetItemById(It.IsAny<Guid>())).Returns(item.Object);
+
+            _sessionManager
+                .Setup(m => m.SendSyncPlayCommand(It.IsAny<string>(), It.IsAny<SendCommand>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+            _sessionManager
+                .Setup(m => m.SendSyncPlayGroupUpdate(It.IsAny<string>(), It.IsAny<GroupUpdate<GroupStateUpdate>>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+
+>>>>>>> upstream/release-12.z
             Manager = new SyncPlayManager(
                 NullLoggerFactory.Instance,
                 userManager.Object,
                 _sessionManager.Object,
+<<<<<<< HEAD
                 libraryManager.Object);
+=======
+                libraryManager.Object)
+            {
+                GroupWaitTimeout = groupWaitTimeout ?? SyncPlayGroup.DefaultGroupWaitTimeout
+            };
+>>>>>>> upstream/release-12.z
 
             Session = CreateSession("session-1");
         }
@@ -91,5 +157,20 @@ public class SyncPlayManagerTests
                 UserName = User.Username
             };
         }
+<<<<<<< HEAD
+=======
+
+        public async Task<GroupStateType> WaitForState(SessionInfo session, Guid groupId, GroupStateType expected)
+        {
+            var deadline = DateTime.UtcNow.AddSeconds(10);
+            GroupStateType state;
+            while ((state = Manager.GetGroup(session, groupId).State) != expected && DateTime.UtcNow < deadline)
+            {
+                await Task.Delay(20, TestContext.Current.CancellationToken);
+            }
+
+            return state;
+        }
+>>>>>>> upstream/release-12.z
     }
 }

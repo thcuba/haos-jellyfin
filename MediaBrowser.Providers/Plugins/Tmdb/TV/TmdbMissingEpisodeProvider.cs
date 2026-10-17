@@ -118,7 +118,11 @@ namespace MediaBrowser.Providers.Plugins.Tmdb.TV
             // create a duplicate.
             // When missing episodes are disabled, this pass also prunes virtual episodes that aired more
             // than the grace period ago, as well as any specials when specials are not wanted.
+<<<<<<< HEAD
             var (existingEpisodes, updatableEpisodes) = GetExistingEpisodes(item, !importMissing, today, gracePeriodDays, importSpecials, out var prunedEpisodes);
+=======
+            var (existingEpisodes, updatableEpisodes, physicalTmdbIds) = GetExistingEpisodes(item, !importMissing, today, gracePeriodDays, importSpecials, out var prunedEpisodes);
+>>>>>>> upstream/release-12.z
 
             var seasonsByNumber = item.GetRecursiveChildren(i => i is Season)
                 .OfType<Season>()
@@ -197,6 +201,16 @@ namespace MediaBrowser.Providers.Plugins.Tmdb.TV
                         continue;
                     }
 
+<<<<<<< HEAD
+=======
+                    // The slot is free, but the episode itself may not be: when the files follow a different
+                    // order, the same episode sits at another number and creating this one would duplicate it.
+                    if (physicalTmdbIds.Contains(tmdbEpisode.Id.ToString(CultureInfo.InvariantCulture)))
+                    {
+                        continue;
+                    }
+
+>>>>>>> upstream/release-12.z
                     var targetSeason = await GetOrCreateSeasonAsync(item, seasonNumber, tmdbSeason.Name, seasonsByNumber, cancellationToken).ConfigureAwait(false);
                     var newEpisode = AddVirtualEpisode(item, targetSeason, tmdbEpisode, premiereDate);
                     await EnsureEpisodeImageAsync(newEpisode, tmdbEpisode, cancellationToken).ConfigureAwait(false);
@@ -364,11 +378,19 @@ namespace MediaBrowser.Providers.Plugins.Tmdb.TV
                 enabledLibraries.Contains(folder.Id.ToString("N", CultureInfo.InvariantCulture), StringComparer.OrdinalIgnoreCase));
         }
 
+<<<<<<< HEAD
         private (HashSet<(int Season, int Episode)> Keys, Dictionary<(int Season, int Episode), Episode> Updatable) GetExistingEpisodes(Series series, bool pruneAgedOut, DateTime today, int gracePeriodDays, bool importSpecials, out bool pruned)
+=======
+        private (HashSet<(int Season, int Episode)> Keys, Dictionary<(int Season, int Episode), Episode> Updatable, HashSet<string> PhysicalTmdbIds) GetExistingEpisodes(Series series, bool pruneAgedOut, DateTime today, int gracePeriodDays, bool importSpecials, out bool pruned)
+>>>>>>> upstream/release-12.z
         {
             var keys = new HashSet<(int Season, int Episode)>();
             var updatable = new Dictionary<(int Season, int Episode), Episode>();
             var physicalKeys = new HashSet<(int Season, int Episode)>();
+<<<<<<< HEAD
+=======
+            var physicalTmdbIds = new HashSet<string>(StringComparer.Ordinal);
+>>>>>>> upstream/release-12.z
             var ourVirtuals = new List<((int Season, int Episode) Key, Episode Episode)>();
             pruned = false;
 
@@ -403,6 +425,20 @@ namespace MediaBrowser.Providers.Plugins.Tmdb.TV
                     continue;
                 }
 
+<<<<<<< HEAD
+=======
+                if (!episode.IsVirtualItem)
+                {
+                    // Which episode a file holds is what TMDb's episode id says, not the number the file is
+                    // stored under: aired, DVD and absolute orders number the same episodes differently.
+                    var physicalTmdbId = episode.GetProviderId(MetadataProvider.Tmdb);
+                    if (!string.IsNullOrEmpty(physicalTmdbId))
+                    {
+                        physicalTmdbIds.Add(physicalTmdbId);
+                    }
+                }
+
+>>>>>>> upstream/release-12.z
                 if (episode.ParentIndexNumber.HasValue && episode.IndexNumber.HasValue)
                 {
                     var key = (episode.ParentIndexNumber.Value, episode.IndexNumber.Value);
@@ -432,6 +468,14 @@ namespace MediaBrowser.Providers.Plugins.Tmdb.TV
                     DeleteEpisode(episode, "a physical episode now exists for this slot");
                     pruned = true;
                 }
+<<<<<<< HEAD
+=======
+                else if (physicalTmdbIds.Contains(episode.GetProviderId(MetadataProvider.Tmdb)!))
+                {
+                    DeleteEpisode(episode, "the same episode is already present under another number");
+                    pruned = true;
+                }
+>>>>>>> upstream/release-12.z
                 else
                 {
                     // Virtual episodes this provider created are candidates for metadata sync.
@@ -439,7 +483,11 @@ namespace MediaBrowser.Providers.Plugins.Tmdb.TV
                 }
             }
 
+<<<<<<< HEAD
             return (keys, updatable);
+=======
+            return (keys, updatable, physicalTmdbIds);
+>>>>>>> upstream/release-12.z
         }
 
         /// <summary>

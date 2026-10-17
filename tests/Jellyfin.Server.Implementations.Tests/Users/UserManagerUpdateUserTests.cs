@@ -6,6 +6,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Data;
 using Jellyfin.Database.Implementations;
+<<<<<<< HEAD
+=======
+using Jellyfin.Database.Implementations.Entities;
+>>>>>>> upstream/release-12.z
 using Jellyfin.Database.Implementations.Enums;
 using Jellyfin.Database.Implementations.Locking;
 using Jellyfin.Database.Providers.Sqlite;
@@ -17,6 +21,10 @@ using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Drawing;
 using MediaBrowser.Controller.Events;
 using MediaBrowser.Model.Cryptography;
+<<<<<<< HEAD
+=======
+using MediaBrowser.Model.Users;
+>>>>>>> upstream/release-12.z
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -120,6 +128,30 @@ public sealed class UserManagerUpdateUserTests : IDisposable
     }
 
     [Fact]
+<<<<<<< HEAD
+=======
+    public async Task UpdatePolicyAsync_RaisesOnUserUpdated()
+    {
+        var user = await _userManager.CreateUserAsync("policyeventuser");
+
+        User? updated = null;
+        _userManager.OnUserUpdated += (_, e) => updated = e.Argument;
+
+        await _userManager.UpdatePolicyAsync(
+            user.Id,
+            new UserPolicy
+            {
+                EnableAllDevices = false,
+                AuthenticationProviderId = user.AuthenticationProviderId,
+                PasswordResetProviderId = user.PasswordResetProviderId
+            });
+
+        Assert.NotNull(updated);
+        Assert.Equal(user.Id, updated.Id);
+    }
+
+    [Fact]
+>>>>>>> upstream/release-12.z
     public async Task UpdateUserAsync_AppliesPermissionAndPreferenceChanges()
     {
         var user = await _userManager.CreateUserAsync("policyuser");
