@@ -105,3 +105,9 @@
 **Learning:** Continuing regex expression loops in `AudioBookFilePathParser` and `AudioBookNameParser` after all target properties (`ChapterNumber` & `PartNumber` or `Name` & `Year`) are populated executes redundant `Regex.Match` calls on remaining patterns that cannot affect the result. Breaking early as soon as all target fields are populated eliminates unnecessary regex engine evaluations during audiobook library scans. Additionally, conditionally replacing spaces in strings (`name.Contains(' ') ? name.Replace(' ', '.') : null`) in `AudioBookListResolver` avoids heap string allocations and duplicate `Contains` checks when no spaces exist.
 
 **Action:** Add early break guards inside regex evaluation loops once all target match properties are populated, and condition string replacements on character existence.
+
+## 2026-10-07 - O(1) season resolution in SeriesMetadataService
+
+**Learning:** Calling `seasons.Find(s => s.IndexNumber == episode.ParentIndexNumber)` inside child reconciliation loops executes $O(E \times S)$ linear scans over seasons and allocates lambda closures per episode. Pre-indexing seasons into a `Dictionary<int, Season>` using `TryAdd` prior to looping over children reduces season lookups to $O(1)$ complexity and eliminates per-episode delegate allocations.
+
+**Action:** Pre-index season collections into a `Dictionary<int, Season>` using `TryAdd` before iterating episodes in series metadata services.
