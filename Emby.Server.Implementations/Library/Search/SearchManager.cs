@@ -143,27 +143,11 @@ public class SearchManager : ISearchManager
 
             baseQuery = _queryHelpers.ApplyAccessFiltering(dbContext, baseQuery, accessFilter);
 
-<<<<<<< HEAD
             var allowedIds = await baseQuery
                 .Select(e => e.Id)
                 .ToHashSetAsync(cancellationToken)
                 .ConfigureAwait(false);
 
-=======
-            var allowed = await baseQuery
-                .Select(e => new { e.Id, e.PrimaryVersionId })
-                .ToListAsync(cancellationToken)
-                .ConfigureAwait(false);
-
-            var allowedIds = allowed.Select(e => e.Id).ToHashSet();
-
-            // A provider can return both an alternate version and the primary it belongs to, and the
-            // two are one item to the user.
-            allowedIds.ExceptWith(allowed
-                .Where(e => e.PrimaryVersionId.HasValue && allowedIds.Contains(e.PrimaryVersionId.Value))
-                .Select(e => e.Id));
-
->>>>>>> upstream/release-12.z
             if (allowedIds.Count == candidates.Count)
             {
                 return candidates;

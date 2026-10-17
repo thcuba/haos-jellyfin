@@ -19,11 +19,6 @@ namespace Emby.Server.Implementations.SyncPlay
     public class SyncPlayManager : ISyncPlayManager, IDisposable
     {
         /// <summary>
-        /// How often, in milliseconds, the groups are checked for a spent wait deadline.
-        /// </summary>
-        private const int GroupWaitSweepInterval = 1000;
-
-        /// <summary>
         /// The logger.
         /// </summary>
         private readonly ILogger<SyncPlayManager> _logger;
@@ -74,11 +69,6 @@ namespace Emby.Server.Implementations.SyncPlay
         /// </remarks>
         private readonly Lock _groupsLock = new();
 
-        /// <summary>
-        /// The timer that watches the groups' wait deadlines, running only while there are groups.
-        /// </summary>
-        private readonly Timer _groupWaitTimer;
-
         private bool _disposed = false;
 
         /// <summary>
@@ -100,14 +90,7 @@ namespace Emby.Server.Implementations.SyncPlay
             _libraryManager = libraryManager;
             _logger = loggerFactory.CreateLogger<SyncPlayManager>();
             _sessionManager.SessionEnded += OnSessionEnded;
-            _groupWaitTimer = new Timer(_ => OnGroupWaitTimerTick(), null, Timeout.Infinite, Timeout.Infinite);
         }
-
-        /// <summary>
-        /// Gets the maximum time, in milliseconds, a group waits for its members to report ready.
-        /// </summary>
-        /// <value>The group-wait timeout.</value>
-        internal long GroupWaitTimeout { get; init; } = Group.DefaultGroupWaitTimeout;
 
         /// <inheritdoc />
         public void Dispose()
@@ -139,12 +122,8 @@ namespace Emby.Server.Implementations.SyncPlay
                     LeaveGroup(session, leaveGroupRequest, cancellationToken);
                 }
 
-                var group = new Group(_loggerFactory, _userManager, _sessionManager, _libraryManager)
-                {
-                    GroupWaitTimeout = GroupWaitTimeout
-                };
+                var group = new Group(_loggerFactory, _userManager, _sessionManager, _libraryManager);
                 _groups[group.GroupId] = group;
-                UpdateGroupWaitTimer();
 
                 if (!_sessionToGroupMap.TryAdd(session.Id, group))
                 {
@@ -263,7 +242,6 @@ namespace Emby.Server.Implementations.SyncPlay
                         {
                             _logger.LogInformation("Group {GroupId} is empty, removing it.", group.GroupId);
                             _groups.Remove(group.GroupId, out _);
-                            UpdateGroupWaitTimer();
                         }
                     }
                 }
@@ -406,50 +384,7 @@ namespace Emby.Server.Implementations.SyncPlay
             }
 
             _sessionManager.SessionEnded -= OnSessionEnded;
-
-            lock (_groupsLock)
-            {
-                _disposed = true;
-                _groupWaitTimer.Dispose();
-            }
-        }
-
-        private void UpdateGroupWaitTimer()
-        {
-            if (_disposed)
-            {
-                return;
-            }
-
-            var interval = _groups.IsEmpty ? Timeout.Infinite : GroupWaitSweepInterval;
-            _groupWaitTimer.Change(interval, interval);
-        }
-
-        private void OnGroupWaitTimerTick()
-        {
-            try
-            {
-                lock (_groupsLock)
-                {
-                    if (_disposed)
-                    {
-                        return;
-                    }
-
-                    foreach (var (_, group) in _groups)
-                    {
-                        // Group lock required as Group is not thread-safe.
-                        lock (group)
-                        {
-                            group.HandleGroupWaitTimeout(CancellationToken.None);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error while recovering SyncPlay groups from a timed out wait.");
-            }
+            _disposed = true;
         }
 
         private void OnSessionEnded(object sender, SessionEventArgs e)

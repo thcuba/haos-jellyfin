@@ -1411,12 +1411,7 @@ namespace MediaBrowser.Controller.Entities
         /// token shared by the descriptors but separated only by spaces (e.g. a common "2160p ") is
         /// kept in the label, falling back to a space only when no structural delimiter is shared. The
         /// separators mirror the version delimiters recognised by the naming layer (Emby.Naming
-<<<<<<< HEAD
         /// VideoFlagDelimiters).
-=======
-        /// VideoFlagDelimiters), except that a dot between digits is a decimal point rather than a
-        /// delimiter, so numeric version labels stay whole.
->>>>>>> upstream/release-12.z
         /// </summary>
         /// <param name="fileNames">The version file names without extension; must contain at least one entry.</param>
         /// <returns>The shared prefix retreated to a separator boundary, or an empty string when none is shared.</returns>
@@ -1450,18 +1445,9 @@ namespace MediaBrowser.Controller.Entities
 
             if (!prefixIsWholeName)
             {
-<<<<<<< HEAD
                 // Retreat to the last structural delimiter ('-', '_', '.').
                 var cut = prefix.Length;
                 while (cut > 0 && Array.IndexOf(VersionDelimiters, prefix[cut - 1]) < 0)
-=======
-                // Retreat to the last structural delimiter ('-', '_', '.'), skipping dots that are
-                // decimal points within a number rather than delimiters (see IsDecimalPoint).
-                var cut = prefix.Length;
-                while (cut > 0
-                    && (Array.IndexOf(VersionDelimiters, prefix[cut - 1]) < 0
-                        || IsDecimalPoint(prefix, cut - 1, fileNames)))
->>>>>>> upstream/release-12.z
                 {
                     cut--;
                 }
@@ -1481,34 +1467,6 @@ namespace MediaBrowser.Controller.Entities
             return prefix;
         }
 
-<<<<<<< HEAD
-=======
-        private static bool IsDecimalPoint(string prefix, int index, IReadOnlyList<string> fileNames)
-        {
-            if (index == 0 || prefix[index] != '.' || !char.IsDigit(prefix[index - 1]))
-            {
-                return false;
-            }
-
-            if (index + 1 < prefix.Length)
-            {
-                return char.IsDigit(prefix[index + 1]);
-            }
-
-            // The dot ends the prefix, so the character after it is the first one that differs between
-            // the versions: only a decimal point when every version continues the number.
-            for (var i = 0; i < fileNames.Count; i++)
-            {
-                if (fileNames[i].Length <= index + 1 || !char.IsDigit(fileNames[i][index + 1]))
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
->>>>>>> upstream/release-12.z
         public Task RefreshMetadata(CancellationToken cancellationToken)
         {
             return RefreshMetadata(new MetadataRefreshOptions(new DirectoryService(FileSystem)), cancellationToken);
@@ -2573,9 +2531,8 @@ namespace MediaBrowser.Controller.Entities
                     {
                         var newDateModified = FileSystem.GetLastWriteTimeUtc(newImage);
 
-                        // If date changed then we need to reset saved image dimensions. Stores such as PostgreSQL keep
-                        // only microseconds, so an exact comparison would treat every unchanged image as modified.
-                        if (Math.Abs((existing.DateModified - newDateModified).TotalSeconds) > 1 && (existing.Width > 0 || existing.Height > 0))
+                        // If date changed then we need to reset saved image dimensions
+                        if (existing.DateModified != newDateModified && (existing.Width > 0 || existing.Height > 0))
                         {
                             existing.Width = 0;
                             existing.Height = 0;

@@ -9,7 +9,6 @@ jobs:
     name: Build & smoke test
     runs-on: ubuntu-latest
     steps:
-<<<<<<< HEAD
       - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
@@ -17,11 +16,6 @@ jobs:
 
       - name: Build Docker image
         uses: docker/build-push-action@v5
-=======
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
->>>>>>> upstream/release-12.z
         with:
           context: ./haos-jellyfin
           load: true
@@ -37,21 +31,12 @@ jobs:
           echo "Exposed ports: $(docker inspect haos-jellyfin:test --format '{{json .Config.ExposedPorts}}')"
           echo "Env count: $(docker inspect haos-jellyfin:test --format '{{len .Config.Env}}')"
 
-<<<<<<< HEAD
       - name: Verify image structure
         run: |
           echo "=== VERIFICA STRUTTURA ==="
           # Ogni verifica fallisce il job (set -e) se il binario è assente,
           # così lo smoke test è realmente bloccante.
           set -e
-=======
-      - name: Merge code coverage results
-        uses: danielpalme/ReportGenerator-GitHub-Action@d3ebf1f760f7d8ab92cc44d9bcfee7ad73722a31 # v5.5.11
-        with:
-          reports: "**/coverage.cobertura.xml"
-          targetdir: "merged/"
-          reporttypes: "Cobertura"
->>>>>>> upstream/release-12.z
 
           docker run --rm --entrypoint ls haos-jellyfin:test /jellyfin/jellyfin > /dev/null 2>&1 && \
             echo "✅ Jellyfin binario presente" || { echo "❌ Jellyfin binario assente"; exit 1; }

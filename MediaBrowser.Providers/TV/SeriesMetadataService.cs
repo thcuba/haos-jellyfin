@@ -112,7 +112,6 @@ public class SeriesMetadataService : MetadataService<Series, SeriesInfo>
         var children = series.GetRecursiveChildren(i => i is Season || i is Episode);
         var seasons = children.OfType<Season>().ToList();
 
-<<<<<<< HEAD
         // Performance optimization: Pre-build a dictionary of seasons by IndexNumber to avoid O(S) linear search
         // (via seasons.Find) and delegate closure allocations for every episode in children during child reconciliation.
         var seasonsByNumberLookup = new Dictionary<int, Season>();
@@ -124,8 +123,6 @@ public class SeriesMetadataService : MetadataService<Series, SeriesInfo>
             }
         }
 
-=======
->>>>>>> upstream/release-12.z
         foreach (var child in children)
         {
             var updateType = ItemUpdateType.None;
@@ -140,15 +137,9 @@ public class SeriesMetadataService : MetadataService<Series, SeriesInfo>
             if (child is Episode episode)
             {
                 var seasonId = episode.FindSeasonId();
-<<<<<<< HEAD
                 if (seasonId.IsEmpty() && episode.ParentIndexNumber.HasValue && seasonsByNumberLookup.TryGetValue(episode.ParentIndexNumber.Value, out var targetSeason))
                 {
                     seasonId = targetSeason.Id;
-=======
-                if (seasonId.IsEmpty() && episode.ParentIndexNumber.HasValue)
-                {
-                    seasonId = seasons.Find(s => s.IndexNumber == episode.ParentIndexNumber)?.Id ?? Guid.Empty;
->>>>>>> upstream/release-12.z
                 }
 
                 if (!seasonId.IsEmpty() && !episode.SeasonId.Equals(seasonId))
@@ -227,57 +218,14 @@ public class SeriesMetadataService : MetadataService<Series, SeriesInfo>
         }
     }
 
-    internal static HashSet<string> GetPresentEpisodeIds(IEnumerable<Episode> episodes)
-    {
-        var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        foreach (var episode in episodes)
-        {
-            if (episode.IsVirtualItem || episode.IsMissingEpisode)
-            {
-                continue;
-            }
-
-            foreach (var (provider, id) in episode.ProviderIds)
-            {
-                if (string.IsNullOrWhiteSpace(id))
-                {
-                    continue;
-                }
-
-                var key = IdentityKey(provider, id);
-                counts[key] = counts.GetValueOrDefault(key) + 1;
-            }
-        }
-
-        return [.. counts.Where(e => e.Value == 1).Select(e => e.Key)];
-    }
-
-    internal static bool IsAlreadyPresent(Episode episode, HashSet<string> presentEpisodeIds)
-    {
-        foreach (var (provider, id) in episode.ProviderIds)
-        {
-            if (!string.IsNullOrWhiteSpace(id) && presentEpisodeIds.Contains(IdentityKey(provider, id)))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static string IdentityKey(string provider, string id) => provider + "=" + id;
-
     private void RemoveObsoleteEpisodes(Series series)
     {
-        var episodes = series.GetEpisodes(null, new DtoOptions(), true)
+        var episodesBySeason = series.GetEpisodes(null, new DtoOptions(), true)
                         .OfType<Episode>()
+                        .GroupBy(e => e.ParentIndexNumber)
                         .ToList();
 
-        // Matched across the whole series, not per season: the orders disagree about which season an episode
-        // belongs to as readily as they disagree about its number.
-        var presentEpisodeIds = GetPresentEpisodeIds(episodes);
-
-        foreach (var seasonEpisodes in episodes.GroupBy(e => e.ParentIndexNumber))
+        foreach (var seasonEpisodes in episodesBySeason)
         {
             List<Episode> nonPhysicalEpisodes = [];
             List<Episode> physicalEpisodes = [];
@@ -296,35 +244,26 @@ public class SeriesMetadataService : MetadataService<Series, SeriesInfo>
             foreach (var episode in nonPhysicalEpisodes)
             {
                 // Episodes without an episode number are practically orphaned and should be deleted
-                if (!episode.IndexNumber.HasValue)
-                {
-                    DeleteEpisode(episode, "it has no episode number");
-                    continue;
-                }
-
                 // Episodes with a physical equivalent should be deleted (they are no longer missing)
-                if (physicalEpisodes.Any(e => e.ContainsEpisodeNumber(episode.IndexNumber.Value)))
+                var shouldKeep = episode.IndexNumber.HasValue && !physicalEpisodes.Any(e => e.ContainsEpisodeNumber(episode.IndexNumber.Value));
+
+                if (shouldKeep)
                 {
-                    DeleteEpisode(episode, "a physical episode has that number");
                     continue;
                 }
 
-                if (IsAlreadyPresent(episode, presentEpisodeIds))
-                {
-                    DeleteEpisode(episode, "the same episode is already present under another number");
-                }
+                DeleteEpisode(episode);
             }
         }
     }
 
-    private void DeleteEpisode(Episode episode, string reason)
+    private void DeleteEpisode(Episode episode)
     {
         Logger.LogInformation(
-            "Removing virtual episode S{SeasonNumber}E{EpisodeNumber} in series {SeriesName}: {Reason}",
+            "Removing virtual episode S{SeasonNumber}E{EpisodeNumber} in series {SeriesName}",
             episode.ParentIndexNumber,
             episode.IndexNumber,
-            episode.SeriesName,
-            reason);
+            episode.SeriesName);
 
         LibraryManager.DeleteItem(
             episode,
@@ -443,7 +382,6 @@ public class SeriesMetadataService : MetadataService<Series, SeriesInfo>
                 var seasonName = GetValidSeasonNameForSeries(series, null, seasonNumber);
                 var season = await CreateSeasonAsync(series, seasonName, seasonNumber, cancellationToken).ConfigureAwait(false);
                 seasons.Add(season);
-<<<<<<< HEAD
 
                 if (seasonNumber.HasValue)
                 {
@@ -453,8 +391,6 @@ public class SeriesMetadataService : MetadataService<Series, SeriesInfo>
                 {
                     nullSeason = season;
                 }
-=======
->>>>>>> upstream/release-12.z
             }
             else if (existingSeason.IsVirtualItem)
             {
@@ -467,30 +403,14 @@ public class SeriesMetadataService : MetadataService<Series, SeriesInfo>
             }
         }
 
-<<<<<<< HEAD
         var seasonsByNumber = seasons
             .DistinctBy(s => s.IndexNumber)
             .ToDictionary(s => s.IndexNumber);
-=======
-        var seasonsById = seasons.ToDictionary(i => i.Id);
->>>>>>> upstream/release-12.z
 
         // Loop through episodes
         foreach (var episode in episodes)
         {
-<<<<<<< HEAD
             if (!seasonsByNumber.TryGetValue(episode.ParentIndexNumber, out var season) || episode.SeasonId.Equals(season.Id))
-=======
-            // An episode inside a season folder belongs to that season even when no season number
-            // could be parsed from the folder. A series can hold several such unnumbered seasons and
-            // they all match a lookup by index number, which would herd every episode into the first.
-            if (!seasonsById.TryGetValue(episode.FindSeasonId(), out var season))
-            {
-                season = seasons.FirstOrDefault(i => i.IndexNumber == episode.ParentIndexNumber);
-            }
-
-            if (season is null || episode.SeasonId.Equals(season.Id))
->>>>>>> upstream/release-12.z
             {
                 continue;
             }

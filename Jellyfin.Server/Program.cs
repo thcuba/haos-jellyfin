@@ -149,16 +149,8 @@ namespace Jellyfin.Server
                 if (_restartOnShutdown)
                 {
                     _startTimestamp = Stopwatch.GetTimestamp();
-                    try
-                    {
-                        await _setupServer.StopAsync().ConfigureAwait(false);
-                        await _setupServer.RunAsync().ConfigureAwait(false);
-                    }
-                    catch (Exception ex)
-                    {
-                        // The startup page is optional, losing it must not take the restart down with it.
-                        _logger.LogError(ex, "Failed to bring the startup server back up");
-                    }
+                    await _setupServer.StopAsync().ConfigureAwait(false);
+                    await _setupServer.RunAsync().ConfigureAwait(false);
                 }
             } while (_restartOnShutdown);
 
@@ -253,15 +245,7 @@ namespace Jellyfin.Server
                     await appHost.RunStartupTasksAsync().ConfigureAwait(false);
                     _logger.LogInformation("Startup complete {Time:g}", Stopwatch.GetElapsedTime(_startTimestamp));
 
-                    try
-                    {
-                        await _jellyfinHost.WaitForShutdownAsync().ConfigureAwait(false);
-                    }
-                    catch (Exception ex)
-                    {
-                        // A hosted service that throws or times out while stopping must not cancel a pending restart.
-                        _logger.LogError(ex, "Failure while stopping the server");
-                    }
+                    await _jellyfinHost.WaitForShutdownAsync().ConfigureAwait(false);
                 }
 
                 _restartOnShutdown = appHost.ShouldRestart;
@@ -287,11 +271,7 @@ namespace Jellyfin.Server
                 // Don't throw additional exception if startup failed.
                 if (appHost.ServiceProvider is not null)
                 {
-<<<<<<< HEAD
                     _logger.LogInformation("Optimizing the database... This might take a while");
-=======
-                    _logger.LogInformation("Preparing the database for shutdown...");
->>>>>>> upstream/release-12.z
 
                     // Deliberately untimed: a truncated optimization leaves the statistics incomplete.
                     var databaseProvider = appHost.ServiceProvider.GetRequiredService<IJellyfinDatabaseProvider>();

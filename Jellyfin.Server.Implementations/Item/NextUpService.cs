@@ -95,7 +95,7 @@ public class NextUpService : INextUpService
             .Where(e => e.Type == episodeTypeName)
             .Where(e => e.SeriesPresentationUniqueKey != null && seriesKeys.Contains(e.SeriesPresentationUniqueKey))
             .Where(e => e.ParentIndexNumber != 0)
-            .Where(DescendantQueryHelper.IsPlayedBy(userId));
+            .Where(e => e.UserData!.Any(ud => ud.UserId == userId && ud.Played));
         lastWatchedBase = _queryHelpers.ApplyAccessFiltering(context, lastWatchedBase, filter);
 
         // Use lightweight projection + client-side dedup to avoid the correlated scalar subquery
@@ -129,21 +129,12 @@ public class NextUpService : INextUpService
             // Use an explicit Join (INNER JOIN) instead of SelectMany on a collection navigation.
             // SelectMany on UserData with a correlated Where would translate to APPLY,
             // which SQLite does not support.
-            // Access filtering leaves only primaries in the base query, but a play can be recorded
-            // against any version, so each row is attributed to its group's primary before the join.
-            var playedByGroupPrimary = context.UserData
-                .AsNoTracking()
-                .Where(ud => ud.ItemId != EF.Constant(BaseItemRepository.PlaceholderId))
-                .Where(ud => ud.Played)
-                .Join(
-                    context.BaseItems.AsNoTracking(),
-                    ud => ud.ItemId,
-                    bi => bi.Id,
-                    (ud, bi) => new { ud.UserId, ItemId = bi.PrimaryVersionId ?? bi.Id, ud.LastPlayedDate });
-
             var playedWithDates = lastWatchedByDateBase
                 .Join(
-                    playedByGroupPrimary,
+                    context.UserData
+                        .AsNoTracking()
+                        .Where(ud => ud.ItemId != EF.Constant(BaseItemRepository.PlaceholderId))
+                        .Where(ud => ud.Played),
                     e => new { UserId = userId, ItemId = e.Id },
                     ud => new { ud.UserId, ud.ItemId },
                     (e, ud) => new { EpisodeId = e.Id, e.SeriesPresentationUniqueKey, ud.LastPlayedDate })
@@ -207,7 +198,7 @@ public class NextUpService : INextUpService
             .Where(e => e.SeriesPresentationUniqueKey != null && seriesKeys.Contains(e.SeriesPresentationUniqueKey))
             .Where(e => e.ParentIndexNumber != 0)
             .Where(e => !e.IsVirtualItem)
-            .Where(DescendantQueryHelper.IsUnplayedBy(userId));
+            .Where(e => !e.UserData!.Any(ud => ud.UserId == userId && ud.Played));
         allUnplayedBase = _queryHelpers.ApplyAccessFiltering(context, allUnplayedBase, filter);
         var allUnplayedCandidates = allUnplayedBase
             .Select(e => new
@@ -255,7 +246,7 @@ public class NextUpService : INextUpService
                 .Where(e => e.SeriesPresentationUniqueKey != null && seriesKeys.Contains(e.SeriesPresentationUniqueKey))
                 .Where(e => e.ParentIndexNumber != 0)
                 .Where(e => !e.IsVirtualItem)
-                .Where(DescendantQueryHelper.IsPlayedBy(userId));
+                .Where(e => e.UserData!.Any(ud => ud.UserId == userId && ud.Played));
             allPlayedBase = _queryHelpers.ApplyAccessFiltering(context, allPlayedBase, filter);
             var allPlayedCandidates = allPlayedBase
                 .Select(e => new

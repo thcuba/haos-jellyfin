@@ -489,17 +489,10 @@ namespace Emby.Server.Implementations.IO
             ArgumentException.ThrowIfNullOrEmpty(parentPath);
             ArgumentException.ThrowIfNullOrEmpty(path);
 
-            var parent = Path.TrimEndingDirectorySeparator(parentPath);
-
-            // The parent has to be an anchored prefix of the path, otherwise unrelated paths that merely
-            // contain the parent as a segment (e.g. /media and /data/media/tv) would be treated as related.
-            return path.Length > parent.Length
-                   && path.StartsWith(parent, _isEnvironmentCaseInsensitive ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)
-                   && (Path.EndsInDirectorySeparator(parent) || IsDirectorySeparator(path[parent.Length]));
+            return path.Contains(
+                Path.TrimEndingDirectorySeparator(parentPath) + Path.DirectorySeparatorChar,
+                _isEnvironmentCaseInsensitive ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
         }
-
-        private static bool IsDirectorySeparator(char c)
-            => c == Path.DirectorySeparatorChar || c == Path.AltDirectorySeparatorChar;
 
         /// <inheritdoc />
         public virtual bool AreEqual(string path1, string path2)

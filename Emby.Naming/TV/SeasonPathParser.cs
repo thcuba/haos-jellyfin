@@ -14,16 +14,10 @@ namespace Emby.Naming.TV
             @"시즌|シーズン|сезон" +
             @"|season|sæson|saison|staffel|series|stagione|säsong|seizoen|seasong" +
             @"|sezon|sezona|sezóna|sezonul|série|séria|serie|seria|temporada|kausi";
-<<<<<<< HEAD
 
         [GeneratedRegex(@"[ ._\-\[\]]")]
         private static partial Regex CleanNameRegex();
 
-=======
-
-        private static readonly Regex CleanNameRegex = new(@"[ ._\-\[\]]", RegexOptions.Compiled);
-
->>>>>>> upstream/release-12.z
         [GeneratedRegex(@"^\s*((?<seasonnumber>(?>\d+))(?:st|nd|rd|th|\.)*(?!\s*[Ee]\d+))\s*(?:" + SeasonKeywordPattern + @")\s*(?<rightpart>.*)$", RegexOptions.IgnoreCase)]
         private static partial Regex ProcessPre();
 

@@ -651,13 +651,7 @@ public class SimilarItemsManager : ISimilarItemsManager
 
         try
         {
-            var stream = new FileStream(
-                cachePath,
-                FileMode.Open,
-                FileAccess.Read,
-                FileShare.ReadWrite | FileShare.Delete,
-                IODefaults.FileStreamBufferSize,
-                FileOptions.Asynchronous | FileOptions.SequentialScan);
+            var stream = File.OpenRead(cachePath);
             await using (stream.ConfigureAwait(false))
             {
                 var cache = await JsonSerializer.DeserializeAsync<SimilarItemsCache>(stream, JsonDefaults.Options, cancellationToken).ConfigureAwait(false);
@@ -681,7 +675,6 @@ public class SimilarItemsManager : ISimilarItemsManager
 
     private async Task SaveSimilarItemsCacheAsync(string cachePath, List<SimilarItemReference> references, TimeSpan cacheDuration, CancellationToken cancellationToken)
     {
-        string? tempPath = null;
         try
         {
             var directory = Path.GetDirectoryName(cachePath);
@@ -696,33 +689,15 @@ public class SimilarItemsManager : ISimilarItemsManager
                 ExpiresAt = DateTime.UtcNow.Add(cacheDuration)
             };
 
-            tempPath = cachePath + "." + Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture) + ".tmp";
-            var stream = File.Create(tempPath);
+            var stream = File.Create(cachePath);
             await using (stream.ConfigureAwait(false))
             {
                 await JsonSerializer.SerializeAsync(stream, cache, JsonDefaults.Options, cancellationToken).ConfigureAwait(false);
             }
-
-            File.Move(tempPath, cachePath, true);
-            tempPath = null;
         }
         catch (IOException ex)
         {
             _logger.LogWarning(ex, "Failed to save similar items cache to {CachePath}", cachePath);
-        }
-        finally
-        {
-            if (tempPath is not null)
-            {
-                try
-                {
-                    File.Delete(tempPath);
-                }
-                catch (IOException ex)
-                {
-                    _logger.LogDebug(ex, "Failed to delete temporary similar items cache file {TempPath}", tempPath);
-                }
-            }
         }
     }
 

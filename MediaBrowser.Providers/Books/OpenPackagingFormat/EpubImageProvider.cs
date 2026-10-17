@@ -64,8 +64,7 @@ namespace MediaBrowser.Providers.Books.OpenPackagingFormat
             }
 
             var cover = coverReference.Value;
-            // ZIP entry names always use '/', but the cover path is built with Path.Combine, which uses '\' on Windows
-            var coverFile = epub.GetEntry(cover.Path.Replace('\\', '/'));
+            var coverFile = epub.GetEntry(cover.Path);
 
             if (coverFile == null)
             {

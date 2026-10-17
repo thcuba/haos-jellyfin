@@ -113,10 +113,6 @@ namespace Emby.Naming.Video
                 ReadOnlySpan<char> currentSlice;
                 if (index == -1)
                 {
-<<<<<<< HEAD
-=======
-                    // No delimiter left, the last token is the remainder of the path
->>>>>>> upstream/release-12.z
                     currentSlice = path;
                     path = default;
                 }

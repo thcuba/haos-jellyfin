@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using MediaBrowser.Controller.Configuration;
-using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
@@ -501,8 +500,7 @@ namespace MediaBrowser.LocalMetadata.Savers
             {
                 var batched = LibraryManager.GetItemList(new InternalItemsQuery
                 {
-                    ItemIds = [.. idsToResolve],
-                    DtoOptions = DtoOptions.StoredColumnsOnly
+                    ItemIds = [.. idsToResolve]
                 });
                 pathById = new Dictionary<Guid, string?>(batched.Count);
                 foreach (var batchedItem in batched)

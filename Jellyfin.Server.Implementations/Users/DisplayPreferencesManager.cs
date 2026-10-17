@@ -13,8 +13,6 @@ namespace Jellyfin.Server.Implementations.Users;
 /// </summary>
 public sealed class DisplayPreferencesManager : IDisplayPreferencesManager
 {
-    private const int MaxSaveAttempts = 3;
-
     private readonly IDbContextFactory<JellyfinDbContext> _dbContextFactory;
 
     /// <summary>
@@ -30,30 +28,16 @@ public sealed class DisplayPreferencesManager : IDisplayPreferencesManager
     public DisplayPreferences GetDisplayPreferences(Guid userId, Guid itemId, string client)
     {
         using var dbContext = _dbContextFactory.CreateDbContext();
-        var prefs = FindDisplayPreferences(dbContext, userId, itemId, client);
-        if (prefs is not null)
-        {
-            return prefs;
-        }
+        var prefs = dbContext.DisplayPreferences
+            .Include(pref => pref.HomeSections)
+            .FirstOrDefault(pref =>
+                pref.UserId.Equals(userId) && pref.Client == client && pref.ItemId.Equals(itemId));
 
-        prefs = new DisplayPreferences(userId, itemId, client);
-        dbContext.DisplayPreferences.Add(prefs);
-        try
+        if (prefs is null)
         {
+            prefs = new DisplayPreferences(userId, itemId, client);
+            dbContext.DisplayPreferences.Add(prefs);
             dbContext.SaveChanges();
-        }
-        catch (DbUpdateException)
-        {
-            // Another request may have stored the preferences between the lookup and the insert, and the unique index
-            // rejected this one. Return the stored preferences; if there are none, the insert failed for another reason.
-            using var retryContext = _dbContextFactory.CreateDbContext();
-            var stored = FindDisplayPreferences(retryContext, userId, itemId, client);
-            if (stored is null)
-            {
-                throw;
-            }
-
-            return stored;
         }
 
         return prefs;
@@ -68,7 +52,7 @@ public sealed class DisplayPreferencesManager : IDisplayPreferencesManager
 
         if (prefs is null)
         {
-            prefs = new ItemDisplayPreferences(userId, itemId, client);
+            prefs = new ItemDisplayPreferences(userId, Guid.Empty, client);
             dbContext.ItemDisplayPreferences.Add(prefs);
             dbContext.SaveChanges();
         }
@@ -99,35 +83,19 @@ public sealed class DisplayPreferencesManager : IDisplayPreferencesManager
     /// <inheritdoc />
     public void SetCustomItemDisplayPreferences(Guid userId, Guid itemId, string client, Dictionary<string, string?> customPreferences)
     {
-        // Another request can store one of these keys after this one's delete, and the unique index then rejects the
-        // insert. Replacing the set again gives the same result, so the replace is repeated.
-        for (var attempt = 1; ; attempt++)
+        using var dbContext = _dbContextFactory.CreateDbContext();
+        dbContext.CustomItemDisplayPreferences.Where(prefs => prefs.UserId.Equals(userId)
+                            && prefs.ItemId.Equals(itemId)
+                            && prefs.Client == client)
+                            .ExecuteDelete();
+
+        foreach (var (key, value) in customPreferences)
         {
-            using var dbContext = _dbContextFactory.CreateDbContext();
-            using var transaction = dbContext.Database.BeginTransaction();
-            dbContext.CustomItemDisplayPreferences.Where(prefs => prefs.UserId.Equals(userId)
-                                && prefs.ItemId.Equals(itemId)
-                                && prefs.Client == client)
-                                .ExecuteDelete();
-
-            foreach (var (key, value) in customPreferences)
-            {
-                dbContext.CustomItemDisplayPreferences
-                    .Add(new CustomItemDisplayPreferences(userId, itemId, client, key, value));
-            }
-
-            try
-            {
-                dbContext.SaveChanges();
-            }
-            catch (DbUpdateException) when (attempt < MaxSaveAttempts)
-            {
-                continue;
-            }
-
-            transaction.Commit();
-            return;
+            dbContext.CustomItemDisplayPreferences
+                .Add(new CustomItemDisplayPreferences(userId, itemId, client, key, value));
         }
+
+        dbContext.SaveChanges();
     }
 
     /// <inheritdoc/>
@@ -145,9 +113,4 @@ public sealed class DisplayPreferencesManager : IDisplayPreferencesManager
         dbContext.ItemDisplayPreferences.Attach(itemDisplayPreferences).State = EntityState.Modified;
         dbContext.SaveChanges();
     }
-
-    private static DisplayPreferences? FindDisplayPreferences(JellyfinDbContext dbContext, Guid userId, Guid itemId, string client)
-        => dbContext.DisplayPreferences
-            .Include(pref => pref.HomeSections)
-            .FirstOrDefault(pref => pref.UserId.Equals(userId) && pref.Client == client && pref.ItemId.Equals(itemId));
 }

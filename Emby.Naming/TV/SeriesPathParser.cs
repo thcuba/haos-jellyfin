@@ -19,14 +19,6 @@ namespace Emby.Naming.TV
         {
             foreach (var expression in options.EpisodeExpressions)
             {
-                // Optimistic expressions (bare numbers, "01.blah", etc.) are only meant for
-                // episode parsing and produce false series names on release folder names like
-                // "Silo.S03.1080p.WEB-DL..." (e.g. reading "264" as S02E64). Skip them here.
-                if (expression.IsOptimistic)
-                {
-                    continue;
-                }
-
                 var currentResult = Parse(path, expression);
                 if (currentResult.Success)
                 {
@@ -47,7 +39,6 @@ namespace Emby.Naming.TV
             {
                 if (expression.IsNamed)
                 {
-<<<<<<< HEAD
                     var seasonGroup = match.Groups["seasonnumber"];
                     if (!seasonGroup.ValueSpan.IsEmpty)
                     {
@@ -65,20 +56,6 @@ namespace Emby.Naming.TV
                             }
                         }
                     }
-=======
-                    // Reject implausible season numbers (e.g. resolutions like 1280x720
-                    // read as S1280E720), mirroring EpisodePathParser.
-                    var seasonNumberGroup = match.Groups["seasonnumber"];
-                    if (seasonNumberGroup.Success
-                        && int.TryParse(seasonNumberGroup.ValueSpan, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var seasonNumber)
-                        && ((seasonNumber >= 200 && seasonNumber < 1928) || seasonNumber > 2500))
-                    {
-                        return result;
-                    }
-
-                    result.SeriesName = match.Groups["seriesname"].Value;
-                    result.Success = !string.IsNullOrEmpty(result.SeriesName) && !seasonNumberGroup.ValueSpan.IsEmpty;
->>>>>>> upstream/release-12.z
                 }
             }
 

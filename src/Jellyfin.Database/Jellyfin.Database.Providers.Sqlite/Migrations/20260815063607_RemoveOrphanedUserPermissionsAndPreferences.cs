@@ -11,13 +11,8 @@ namespace Jellyfin.Database.Providers.Sqlite.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-<<<<<<< HEAD
             migrationBuilder.Sql("DELETE FROM Permissions WHERE UserId IS NULL;");
             migrationBuilder.Sql("DELETE FROM Preferences WHERE UserId IS NULL;");
-=======
-            migrationBuilder.Sql("DELETE FROM Permissions WHERE UserId IS NULL OR UserId NOT IN (SELECT Id FROM Users);");
-            migrationBuilder.Sql("DELETE FROM Preferences WHERE UserId IS NULL OR UserId NOT IN (SELECT Id FROM Users);");
->>>>>>> upstream/release-12.z
 
             migrationBuilder.DropIndex(
                 name: "IX_Preferences_UserId_Kind",

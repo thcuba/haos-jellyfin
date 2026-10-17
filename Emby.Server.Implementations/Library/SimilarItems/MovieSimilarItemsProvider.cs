@@ -1,5 +1,3 @@
-#pragma warning disable RS0030 // Do not use banned APIs: Guid == is required inside EF expression trees.
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -174,7 +172,7 @@ public sealed class MovieSimilarItemsProvider : ILocalSimilarItemsProvider<Movie
             var allCandidateIdsList = allCandidateIds.ToList();
             var accessibleItems = await baseQuery
                 .WhereOneOrMany(allCandidateIdsList, e => e.Id)
-                .Select(e => new { e.Id, e.PresentationUniqueKey, e.PrimaryVersionId })
+                .Select(e => new { e.Id, e.PresentationUniqueKey })
                 .ToListAsync(cancellationToken).ConfigureAwait(false);
 
             // Phase 3: Pick top IDs per source, dedup by PresentationUniqueKey
@@ -191,9 +189,6 @@ public sealed class MovieSimilarItemsProvider : ILocalSimilarItemsProvider<Movie
                 var orderedIds = accessibleItems
                     .Where(x => scores.ContainsKey(x.Id))
                     .OrderByDescending(x => scores.GetValueOrDefault(x.Id))
-                    // Two versions of one movie score the same, so name the primary as the
-                    // representative of the group rather than whichever came back first.
-                    .ThenBy(x => x.PrimaryVersionId.HasValue)
                     .DistinctBy(x => x.PresentationUniqueKey)
                     .Take(limit)
                     .Select(x => x.Id)
@@ -250,11 +245,6 @@ public sealed class MovieSimilarItemsProvider : ILocalSimilarItemsProvider<Movie
             result[id] = [];
         }
 
-        var hiddenVersionIds = context.BaseItems.AsNoTracking()
-            .Where(e => e.PrimaryVersionId != null
-                && context.BaseItems.Any(p => p.Id == e.PrimaryVersionId && p.TopParentId == e.TopParentId))
-            .Select(e => e.Id);
-
         foreach (var (valueType, weight) in _itemValueDimensions)
         {
             var sourceRows = await context.ItemValuesMap.AsNoTracking()
@@ -270,11 +260,7 @@ public sealed class MovieSimilarItemsProvider : ILocalSimilarItemsProvider<Movie
             }
 
             var candidateRows = await context.ItemValuesMap.AsNoTracking()
-<<<<<<< HEAD
                 .Where(m => !m.Item.PrimaryVersionId.HasValue && m.ItemValue.Type == valueType && allKeys.Contains(m.ItemValue.CleanValue))
-=======
-                .Where(m => !hiddenVersionIds.Contains(m.ItemId) && m.ItemValue.Type == valueType && allKeys.Contains(m.ItemValue.CleanValue))
->>>>>>> upstream/release-12.z
                 .Select(m => new { m.ItemId, Key = m.ItemValue.CleanValue })
                 .ToListAsync(cancellationToken).ConfigureAwait(false);
 
@@ -290,11 +276,7 @@ public sealed class MovieSimilarItemsProvider : ILocalSimilarItemsProvider<Movie
         if (personSourceRows.Count > 0)
         {
             var personCandidateRows = await context.PeopleBaseItemMap.AsNoTracking()
-<<<<<<< HEAD
                 .Where(m => !m.Item.PrimaryVersionId.HasValue)
-=======
-                .Where(m => !hiddenVersionIds.Contains(m.ItemId))
->>>>>>> upstream/release-12.z
                 .Where(m => context.PeopleBaseItemMap
                     .Where(s => sourceIds.Contains(s.ItemId) && _scoredPersonTypes.Contains(s.People.PersonType))
                     .Select(s => s.PeopleId)

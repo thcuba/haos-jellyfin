@@ -1,5 +1,4 @@
 using System;
-using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Jellyfin.Extensions.Json;
@@ -7,7 +6,7 @@ using Jellyfin.Extensions.Json;
 namespace MediaBrowser.Providers.Plugins.Omdb
 {
     /// <summary>
-    /// Converts a string <c>N/A</c> to <c>string.Empty</c> and decodes HTML entities in every other string.
+    /// Converts a string <c>N/A</c> to <c>string.Empty</c>.
     /// </summary>
     public class JsonOmdbNotAvailableStringConverter : JsonConverter<string?>
     {
@@ -28,9 +27,7 @@ namespace MediaBrowser.Providers.Plugins.Omdb
                     return null;
                 }
 
-                // Some OMDb records are HTML encoded, e.g. the cast of tt0093058 lists "Vincent D&apos;Onofrio".
-                // Stored verbatim that name is a second person next to the correctly spelled one.
-                return WebUtility.HtmlDecode(str);
+                return str;
             }
 
             return JsonSerializer.Deserialize<string?>(ref reader, options);

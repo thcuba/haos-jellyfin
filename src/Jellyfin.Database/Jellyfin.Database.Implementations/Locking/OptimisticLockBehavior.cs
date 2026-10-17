@@ -46,9 +46,9 @@ public class OptimisticLockBehavior : IEntityFrameworkCoreLockingBehavior
             TimeSpan.FromSeconds(3)
         ];
 
-        Func<int, Context, TimeSpan> backoffProvider = (retryNo, context) =>
+        Func<int, Context, TimeSpan> backoffProvider = (index, context) =>
         {
-            var backoff = sleepDurations[retryNo - 1];
+            var backoff = sleepDurations[index];
             return backoff + TimeSpan.FromMilliseconds(RandomNumberGenerator.GetInt32(0, (int)(backoff.TotalMilliseconds * .5)));
         };
 
