@@ -587,7 +587,13 @@ namespace MediaBrowser.Controller.MediaEncoding
                 profile = BaseRequest.GetOption(codec, "profile");
             }
 
-            return (profile ?? string.Empty).Split(_separators, StringSplitOptions.RemoveEmptyEntries);
+            // Bolt performance optimization: Return static empty array when string is null/empty to eliminate string.Split heap array allocations.
+            if (string.IsNullOrEmpty(profile))
+            {
+                return Array.Empty<string>();
+            }
+
+            return profile.Split(_separators, StringSplitOptions.RemoveEmptyEntries);
         }
 
         public string[] GetRequestedRangeTypes(string codec)
@@ -599,7 +605,13 @@ namespace MediaBrowser.Controller.MediaEncoding
                 rangetype = BaseRequest.GetOption(codec, "rangetype");
             }
 
-            return (rangetype ?? string.Empty).Split(_separators, StringSplitOptions.RemoveEmptyEntries);
+            // Bolt performance optimization: Return static empty array when string is null/empty to eliminate string.Split heap array allocations.
+            if (string.IsNullOrEmpty(rangetype))
+            {
+                return Array.Empty<string>();
+            }
+
+            return rangetype.Split(_separators, StringSplitOptions.RemoveEmptyEntries);
         }
 
         public string[] GetRequestedCodecTags(string codec)
@@ -611,7 +623,13 @@ namespace MediaBrowser.Controller.MediaEncoding
                 codectag = BaseRequest.GetOption(codec, "codectag");
             }
 
-            return (codectag ?? string.Empty).Split(_separators, StringSplitOptions.RemoveEmptyEntries);
+            // Bolt performance optimization: Return static empty array when string is null/empty to eliminate string.Split heap array allocations.
+            if (string.IsNullOrEmpty(codectag))
+            {
+                return Array.Empty<string>();
+            }
+
+            return codectag.Split(_separators, StringSplitOptions.RemoveEmptyEntries);
         }
 
         public string[] GetRequestedRotations(string codec)
@@ -623,7 +641,13 @@ namespace MediaBrowser.Controller.MediaEncoding
                 rotation = BaseRequest.GetOption(codec, "rotation");
             }
 
-            return (rotation ?? string.Empty).Split(_separators, StringSplitOptions.RemoveEmptyEntries);
+            // Bolt performance optimization: Return static empty array when string is null/empty to eliminate string.Split heap array allocations.
+            if (string.IsNullOrEmpty(rotation))
+            {
+                return Array.Empty<string>();
+            }
+
+            return rotation.Split(_separators, StringSplitOptions.RemoveEmptyEntries);
         }
 
         public string GetRequestedLevel(string codec)

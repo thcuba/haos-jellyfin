@@ -88,20 +88,22 @@ public static class ContainerHelper
         }
 
         // Split input and profile containers using zero-allocation span enumerators.
+        // Bolt performance optimization: Re-create SpanSplit enumerator inside the inner loop so profileContainers is re-iterated properly without allocating heap objects.
         var allInputContainers = inputContainer.Split(',');
-        var allProfileContainers = profileContainers.SpanSplit(',');
         foreach (var container in allInputContainers)
         {
             var trimmedContainer = container.Trim();
-            if (!trimmedContainer.IsEmpty)
+            if (trimmedContainer.IsEmpty)
             {
-                foreach (var profile in allProfileContainers)
+                continue;
+            }
+
+            foreach (var profile in profileContainers.SpanSplit(','))
+            {
+                var trimmedProfile = profile.Trim();
+                if (!trimmedProfile.IsEmpty && trimmedContainer.Equals(trimmedProfile, StringComparison.OrdinalIgnoreCase))
                 {
-                    var trimmedProfile = profile.Trim();
-                    if (!trimmedProfile.IsEmpty && trimmedContainer.Equals(trimmedProfile, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return !isNegativeList;
-                    }
+                    return !isNegativeList;
                 }
             }
         }
