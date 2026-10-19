@@ -44,4 +44,30 @@ public static class LrcLyricParserTests
         Assert.Equal(26, lastLine.Cues[^1].EndPosition);
         Assert.Null(lastLine.Cues[^1].End);
     }
+
+    [Fact]
+    public static void ParseStandardLrc()
+    {
+        var parser = new LrcLyricParser();
+        var lrcContent = "[00:12.00]Line 1\n[00:05.00]Line 0\n[00:20.00]Line 2";
+        var parsed = parser.ParseLyrics(new LyricFile("test.lrc", lrcContent));
+
+        Assert.NotNull(parsed);
+        Assert.Equal(3, parsed.Lyrics.Count);
+        Assert.Equal("Line 0", parsed.Lyrics[0].Text);
+        Assert.Equal(50000000, parsed.Lyrics[0].Start);
+        Assert.Equal("Line 1", parsed.Lyrics[1].Text);
+        Assert.Equal(120000000, parsed.Lyrics[1].Start);
+        Assert.Equal("Line 2", parsed.Lyrics[2].Text);
+        Assert.Equal(200000000, parsed.Lyrics[2].Start);
+    }
+
+    [Fact]
+    public static void ParseUnsupportedExtensionReturnsNull()
+    {
+        var parser = new LrcLyricParser();
+        var parsed = parser.ParseLyrics(new LyricFile("test.txt", "[00:05.00]Line 0"));
+
+        Assert.Null(parsed);
+    }
 }
