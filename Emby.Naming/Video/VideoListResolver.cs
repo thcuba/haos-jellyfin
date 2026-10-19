@@ -34,9 +34,6 @@ namespace Emby.Naming.Video
         [GeneratedRegex("[0-9]{2}[0-9]+[ip]", RegexOptions.IgnoreCase)]
         private static partial Regex ResolutionRegex();
 
-        [GeneratedRegex(@"^\[([^]]*)\]")]
-        private static partial Regex CheckMultiVersionRegex();
-
         /// <summary>
         /// Resolves alternative versions and extras from list of video files.
         /// </summary>
@@ -213,11 +210,13 @@ namespace Emby.Naming.Video
             }
 
             // The CleanStringParser should have removed common keywords etc.
+            // Optimization: Replace CheckMultiVersionRegex().IsMatch(testFilename) with direct zero-allocation span checks
+            // to check if testFilename starts with '[' and contains a closing ']', bypassing the regex engine.
             return testFilename.IsEmpty
                    || testFilename[0] == '-'
                    || testFilename[0] == '_'
                    || testFilename[0] == '.'
-                   || CheckMultiVersionRegex().IsMatch(testFilename);
+                   || (testFilename.Length >= 2 && testFilename[0] == '[' && testFilename[1..].IndexOf(']') != -1);
         }
 
         private List<VideoInfo> GetEpisodesGroupedByVersion(List<VideoInfo> videos)
