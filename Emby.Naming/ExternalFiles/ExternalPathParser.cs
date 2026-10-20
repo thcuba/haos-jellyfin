@@ -39,6 +39,17 @@ namespace Emby.Naming.ExternalFiles
         /// <returns>Returns null or an <see cref="ExternalPathParserResult"/> object if parsing is successful.</returns>
         public ExternalPathParserResult? ParseFile(string path, string? extraString)
         {
+            return ParseFile(path, extraString.AsSpan());
+        }
+
+        /// <summary>
+        /// Parse filename and extract information.
+        /// </summary>
+        /// <param name="path">Path to file.</param>
+        /// <param name="extraSpan">Part of the filename only containing the extra information.</param>
+        /// <returns>Returns null or an <see cref="ExternalPathParserResult"/> object if parsing is successful.</returns>
+        public ExternalPathParserResult? ParseFile(string path, ReadOnlySpan<char> extraSpan)
+        {
             if (path.Length == 0)
             {
                 return null;
@@ -61,10 +72,12 @@ namespace Emby.Naming.ExternalFiles
 
             var pathInfo = new ExternalPathParserResult(path);
 
-            if (string.IsNullOrEmpty(extraString))
+            if (extraSpan.IsEmpty)
             {
                 return pathInfo;
             }
+
+            var extraString = extraSpan.ToString();
 
             foreach (var separator in _namingOptions.MediaFlagDelimiters)
             {
