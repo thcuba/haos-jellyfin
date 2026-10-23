@@ -343,13 +343,13 @@ namespace MediaBrowser.Providers.MediaInfo
             if (extension.Equals(".sub", StringComparison.OrdinalIgnoreCase))
             {
                 // A paired .idx exists; probe it instead of the .sub payload.
-                return pairedVobSubKeys.Contains(GetVobSubPairingKey(file));
+                return pairedVobSubKeys.Contains(GetVobSubPairingKey(file, extension));
             }
 
             if (extension.Equals(".idx", StringComparison.OrdinalIgnoreCase))
             {
                 // Without its .sub payload, the .idx cannot be probed for any data.
-                return !pairedVobSubKeys.Contains(GetVobSubPairingKey(file));
+                return !pairedVobSubKeys.Contains(GetVobSubPairingKey(file, extension));
             }
 
             return false;
@@ -370,11 +370,11 @@ namespace MediaBrowser.Providers.MediaInfo
                 var extension = Path.GetExtension(file.AsSpan());
                 if (extension.Equals(".idx", StringComparison.OrdinalIgnoreCase))
                 {
-                    idxKeys.Add(GetVobSubPairingKey(file));
+                    idxKeys.Add(GetVobSubPairingKey(file, extension));
                 }
                 else if (extension.Equals(".sub", StringComparison.OrdinalIgnoreCase))
                 {
-                    subKeys.Add(GetVobSubPairingKey(file));
+                    subKeys.Add(GetVobSubPairingKey(file, extension));
                 }
             }
 
@@ -387,12 +387,13 @@ namespace MediaBrowser.Providers.MediaInfo
         /// payload only when both live in the same directory.
         /// </summary>
         /// <param name="file">The full path to the file.</param>
+        /// <param name="extension">The file extension as span.</param>
         /// <returns>A key combining the containing directory and file name without extension.</returns>
-        private static string GetVobSubPairingKey(string file)
+        private static string GetVobSubPairingKey(string file, ReadOnlySpan<char> extension)
         {
-            var directory = Path.GetDirectoryName(file) ?? string.Empty;
-            var baseName = Path.GetFileNameWithoutExtension(file);
-            return Path.Combine(directory, baseName);
+            // Bolt performance optimization: Slice file[..^extension.Length] to produce the exact directory + base name key
+            // with a single string allocation, avoiding Path.GetDirectoryName, Path.GetFileNameWithoutExtension, and Path.Combine overhead.
+            return file[..^extension.Length];
         }
 
         /// <summary>
