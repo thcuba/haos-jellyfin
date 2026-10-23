@@ -182,7 +182,16 @@ namespace MediaBrowser.LocalMetadata.Images
                 }
             }
 
-            var imagePrefix = item.FileNameWithoutExtension + "-";
+            var fileNameWithoutExtension = item.FileNameWithoutExtension;
+            Span<char> imagePrefixBuffer = stackalloc char[string.IsNullOrEmpty(fileNameWithoutExtension) ? 1 : fileNameWithoutExtension.Length + 1];
+            ReadOnlySpan<char> imagePrefix = default;
+            if (!string.IsNullOrEmpty(fileNameWithoutExtension))
+            {
+                fileNameWithoutExtension.AsSpan().CopyTo(imagePrefixBuffer);
+                imagePrefixBuffer[fileNameWithoutExtension.Length] = '-';
+                imagePrefix = imagePrefixBuffer[..(fileNameWithoutExtension.Length + 1)];
+            }
+
             var isInMixedFolder = item.IsInMixedFolder;
 
             PopulatePrimaryImages(item, images, files, imagePrefix, isInMixedFolder);
@@ -255,7 +264,7 @@ namespace MediaBrowser.LocalMetadata.Images
             }
         }
 
-        private void PopulatePrimaryImages(BaseItem item, List<LocalImageInfo> images, List<FileSystemMetadata> files, string imagePrefix, bool isInMixedFolder)
+        private void PopulatePrimaryImages(BaseItem item, List<LocalImageInfo> images, List<FileSystemMetadata> files, ReadOnlySpan<char> imagePrefix, bool isInMixedFolder)
         {
             string[] imageFileNames;
 
@@ -311,7 +320,7 @@ namespace MediaBrowser.LocalMetadata.Images
             }
         }
 
-        private void PopulateBackdrops(BaseItem item, List<LocalImageInfo> images, List<FileSystemMetadata> files, string imagePrefix, bool isInMixedFolder)
+        private void PopulateBackdrops(BaseItem item, List<LocalImageInfo> images, List<FileSystemMetadata> files, ReadOnlySpan<char> imagePrefix, bool isInMixedFolder)
         {
             if (!string.IsNullOrEmpty(item.Path))
             {
@@ -319,12 +328,16 @@ namespace MediaBrowser.LocalMetadata.Images
 
                 if (!string.IsNullOrEmpty(name))
                 {
-                    AddImage(files, images, name + "-fanart", ImageType.Backdrop, imagePrefix);
+                    Span<char> fanartBuffer = stackalloc char[name.Length + 7];
+                    name.AsSpan().CopyTo(fanartBuffer);
+                    "-fanart".AsSpan().CopyTo(fanartBuffer[name.Length..]);
+
+                    AddImage(files, images, fanartBuffer, ImageType.Backdrop, imagePrefix);
 
                     // Support without the prefix if it's in its own folder
                     if (!isInMixedFolder)
                     {
-                        AddImage(files, images, name + "-fanart", ImageType.Backdrop);
+                        AddImage(files, images, fanartBuffer, ImageType.Backdrop);
                     }
                 }
             }
@@ -333,8 +346,15 @@ namespace MediaBrowser.LocalMetadata.Images
             PopulateBackdrops(images, files, imagePrefix, "background", "background-", isInMixedFolder, ImageType.Backdrop);
             PopulateBackdrops(images, files, imagePrefix, "art", "art-", isInMixedFolder, ImageType.Backdrop);
 
-            var extraFanartFolder = files
-                .FirstOrDefault(i => string.Equals(i.Name, "extrafanart", StringComparison.OrdinalIgnoreCase));
+            FileSystemMetadata? extraFanartFolder = null;
+            for (var i = 0; i < files.Count; i++)
+            {
+                if (string.Equals(files[i].Name, "extrafanart", StringComparison.OrdinalIgnoreCase))
+                {
+                    extraFanartFolder = files[i];
+                    break;
+                }
+            }
 
             if (extraFanartFolder is not null)
             {
@@ -355,26 +375,33 @@ namespace MediaBrowser.LocalMetadata.Images
             }));
         }
 
-        private void PopulateBackdrops(List<LocalImageInfo> images, List<FileSystemMetadata> files, string imagePrefix, string firstFileName, string subsequentFileNamePrefix, bool isInMixedFolder, ImageType type)
+        private void PopulateBackdrops(List<LocalImageInfo> images, List<FileSystemMetadata> files, ReadOnlySpan<char> imagePrefix, string firstFileName, string subsequentFileNamePrefix, bool isInMixedFolder, ImageType type)
         {
-            // Bolt performance optimization: Pass imagePrefix as the prefix parameter to AddImage/GetImage
-            // instead of concatenating imagePrefix + firstFileName / imagePrefix + subsequentFileNamePrefix + i,
-            // eliminating heap string allocations on every backdrop image check.
+            // Bolt performance optimization: Accept ReadOnlySpan<char> parameters and format numbered backdrop names into
+            // a stack-allocated buffer (stackalloc char[64]), eliminating heap string allocations during local image scanning.
             AddImage(files, images, firstFileName, type, imagePrefix);
+
+            Span<char> nameBuffer = stackalloc char[64];
+            var prefixSpan = subsequentFileNamePrefix.AsSpan();
+            prefixSpan.CopyTo(nameBuffer);
 
             var unfound = 0;
             for (var i = 1; i <= 20; i++)
             {
                 // Screenshot Image
-                var found = AddImage(files, images, subsequentFileNamePrefix + i, type, imagePrefix);
-
-                if (!found)
+                if (i.TryFormat(nameBuffer[prefixSpan.Length..], out var charsWritten, provider: CultureInfo.InvariantCulture))
                 {
-                    unfound++;
+                    var nameSpan = nameBuffer[..(prefixSpan.Length + charsWritten)];
+                    var found = AddImage(files, images, nameSpan, type, imagePrefix);
 
-                    if (unfound >= 3)
+                    if (!found)
                     {
-                        break;
+                        unfound++;
+
+                        if (unfound >= 3)
+                        {
+                            break;
+                        }
                     }
                 }
             }
@@ -388,15 +415,19 @@ namespace MediaBrowser.LocalMetadata.Images
                 for (var i = 1; i <= 20; i++)
                 {
                     // Screenshot Image
-                    var found = AddImage(files, images, subsequentFileNamePrefix + i, type);
-
-                    if (!found)
+                    if (i.TryFormat(nameBuffer[prefixSpan.Length..], out var charsWritten, provider: CultureInfo.InvariantCulture))
                     {
-                        unfound++;
+                        var nameSpan = nameBuffer[..(prefixSpan.Length + charsWritten)];
+                        var found = AddImage(files, images, nameSpan, type);
 
-                        if (unfound >= 3)
+                        if (!found)
                         {
-                            break;
+                            unfound++;
+
+                            if (unfound >= 3)
+                            {
+                                break;
+                            }
                         }
                     }
                 }
@@ -432,17 +463,20 @@ namespace MediaBrowser.LocalMetadata.Images
 
             foreach (var filename in filenamePrefixes)
             {
-                // Bolt performance optimization: Construct seasonPrefix once per prefix and pass it as the prefix parameter,
-                // avoiding individual string concatenation per image type lookup.
-                var seasonPrefix = filename + "-";
-                AddImage(seriesFiles, images, "poster", ImageType.Primary, seasonPrefix);
-                AddImage(seriesFiles, images, "fanart", ImageType.Backdrop, seasonPrefix);
-                AddImage(seriesFiles, images, "banner", ImageType.Banner, seasonPrefix);
-                AddImage(seriesFiles, images, "landscape", ImageType.Thumb, seasonPrefix);
+                // Bolt performance optimization: Format seasonPrefix directly into a stack-allocated buffer and pass as ReadOnlySpan<char>,
+                // eliminating heap string allocations during season image lookups.
+                Span<char> seasonPrefixBuffer = stackalloc char[filename.Length + 1];
+                filename.AsSpan().CopyTo(seasonPrefixBuffer);
+                seasonPrefixBuffer[filename.Length] = '-';
+
+                AddImage(seriesFiles, images, "poster", ImageType.Primary, seasonPrefixBuffer);
+                AddImage(seriesFiles, images, "fanart", ImageType.Backdrop, seasonPrefixBuffer);
+                AddImage(seriesFiles, images, "banner", ImageType.Banner, seasonPrefixBuffer);
+                AddImage(seriesFiles, images, "landscape", ImageType.Thumb, seasonPrefixBuffer);
             }
         }
 
-        private bool AddImage(List<FileSystemMetadata> files, List<LocalImageInfo> images, string name, string imagePrefix, bool isInMixedFolder, ImageType type)
+        private bool AddImage(List<FileSystemMetadata> files, List<LocalImageInfo> images, ReadOnlySpan<char> name, ReadOnlySpan<char> imagePrefix, bool isInMixedFolder, ImageType type)
         {
             var added = AddImage(files, images, name, type, imagePrefix);
 
@@ -457,7 +491,7 @@ namespace MediaBrowser.LocalMetadata.Images
             return added;
         }
 
-        private static bool AddImage(IReadOnlyList<FileSystemMetadata> files, List<LocalImageInfo> images, string name, ImageType type, string? prefix = null)
+        private static bool AddImage(IReadOnlyList<FileSystemMetadata> files, List<LocalImageInfo> images, ReadOnlySpan<char> name, ImageType type, ReadOnlySpan<char> prefix = default)
         {
             var image = GetImage(files, name, prefix);
 
@@ -475,9 +509,9 @@ namespace MediaBrowser.LocalMetadata.Images
             return true;
         }
 
-        private static FileSystemMetadata? GetImage(IReadOnlyList<FileSystemMetadata> files, string name, string? prefix = null)
+        private static FileSystemMetadata? GetImage(IReadOnlyList<FileSystemMetadata> files, ReadOnlySpan<char> name, ReadOnlySpan<char> prefix = default)
         {
-            var fileNameLength = name.Length + (prefix?.Length ?? 0);
+            var fileNameLength = name.Length + prefix.Length;
             for (var i = 0; i < files.Count; i++)
             {
                 var file = files[i];

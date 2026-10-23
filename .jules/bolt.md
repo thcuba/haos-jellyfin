@@ -111,3 +111,9 @@
 **Learning:** Calling `seasons.Find(s => s.IndexNumber == episode.ParentIndexNumber)` inside child reconciliation loops executes $O(E \times S)$ linear scans over seasons and allocates lambda closures per episode. Pre-indexing seasons into a `Dictionary<int, Season>` using `TryAdd` prior to looping over children reduces season lookups to $O(1)$ complexity and eliminates per-episode delegate allocations.
 
 **Action:** Pre-index season collections into a `Dictionary<int, Season>` using `TryAdd` before iterating episodes in series metadata services.
+
+## 2026-10-08 - Stackalloc buffer formatting in LocalImageProvider
+
+**Learning:** Formatting numbered backdrop image names (e.g., `fanart-1`, `background-2`) into a `stackalloc char[64]` buffer using `i.TryFormat(buffer[prefixSpan.Length..], ...)` and passing `ReadOnlySpan<char>` to `AddImage`/`GetImage` eliminates up to 160 heap string allocations per item scanned in `LocalImageProvider`.
+
+**Action:** Format numbered filenames and prefixes into stack-allocated character buffers when querying local media files in loops.
