@@ -80,13 +80,14 @@ namespace Emby.Naming.Video
 
             var extraResult = ExtraRuleResolver.GetExtraInfo(path, namingOptions, libraryRoot);
 
-            var name = Path.GetFileNameWithoutExtension(path);
-
+            string name;
             int? year = null;
 
             if (parseName)
             {
-                // Optimization: Pass ReadOnlySpan<char> filename directly to CleanDateTime to avoid string allocation
+                // Bolt performance optimization: Pass ReadOnlySpan<char> filename directly to CleanDateTime
+                // and defer calling Path.GetFileNameWithoutExtension(path) to the else branch when parseName is false,
+                // eliminating 1 unneeded string heap allocation for 100% of video files resolved with parseName = true.
                 var cleanDateTimeResult = CleanDateTime(Path.GetFileNameWithoutExtension(path.AsSpan()), namingOptions);
                 name = cleanDateTimeResult.Name;
                 year = cleanDateTimeResult.Year;
@@ -95,6 +96,10 @@ namespace Emby.Naming.Video
                 {
                     name = newName;
                 }
+            }
+            else
+            {
+                name = Path.GetFileNameWithoutExtension(path);
             }
 
             return new VideoFileInfo(
