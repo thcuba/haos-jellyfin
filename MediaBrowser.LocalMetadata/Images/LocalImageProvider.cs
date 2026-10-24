@@ -105,6 +105,26 @@ namespace MediaBrowser.LocalMetadata.Images
             return false;
         }
 
+        private static int GetImageExtensionRank(string? extension)
+        {
+            if (string.IsNullOrEmpty(extension))
+            {
+                return -1;
+            }
+
+            var extSpan = extension.AsSpan();
+            var supported = BaseItem.SupportedImageExtensions;
+            for (var i = 0; i < supported.Length; i++)
+            {
+                if (extSpan.Equals(supported[i], StringComparison.OrdinalIgnoreCase))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
         private static IEnumerable<FileSystemMetadata> GetFiles(BaseItem item, bool includeDirectories, IDirectoryService directoryService)
         {
             if (!item.IsFileProtocol)
@@ -120,11 +140,13 @@ namespace MediaBrowser.LocalMetadata.Images
                 return Enumerable.Empty<FileSystemMetadata>();
             }
 
+            // Bolt performance optimization: Use GetImageExtensionRank to perform zero-allocation span checks against BaseItem.SupportedImageExtensions
+            // and eliminate repeated Array.IndexOf string allocations and linear array scans during sorting.
             return directoryService.GetFileSystemEntries(path)
                 .Where(i =>
                     (includeDirectories && i.IsDirectory)
-                    || BaseItem.SupportedImageExtensions.Contains(i.Extension, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(i => Array.IndexOf(BaseItem.SupportedImageExtensions, i.Extension ?? string.Empty));
+                    || GetImageExtensionRank(i.Extension) >= 0)
+                .OrderBy(i => GetImageExtensionRank(i.Extension));
         }
 
         /// <inheritdoc />
@@ -163,7 +185,7 @@ namespace MediaBrowser.LocalMetadata.Images
             IEnumerable<FileSystemMetadata> files = paths.SelectMany(i => _fileSystem.GetFiles(i, BaseItem.SupportedImageExtensions, true, false));
 
             files = files
-                .OrderBy(i => Array.IndexOf(BaseItem.SupportedImageExtensions, i.Extension ?? string.Empty));
+                .OrderBy(i => GetImageExtensionRank(i.Extension));
 
             var list = new List<LocalImageInfo>();
 
