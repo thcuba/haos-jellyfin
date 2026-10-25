@@ -70,19 +70,19 @@ namespace Emby.Naming.Book
                     result.Name = nameGroup.ValueSpan.Trim().ToString();
                 }
 
-                if (match.Groups.TryGetValue(IndexMatchGroup, out Group? indexGroup) && indexGroup.Success && int.TryParse(indexGroup.Value, out var index))
+                if (match.Groups.TryGetValue(IndexMatchGroup, out Group? indexGroup) && indexGroup.Success && int.TryParse(indexGroup.ValueSpan, out var index))
                 {
                     result.Index = index;
                 }
 
-                if (match.Groups.TryGetValue(YearMatchGroup, out Group? yearGroup) && yearGroup.Success && int.TryParse(yearGroup.Value, out var year))
+                if (match.Groups.TryGetValue(YearMatchGroup, out Group? yearGroup) && yearGroup.Success && int.TryParse(yearGroup.ValueSpan, out var year))
                 {
                     result.Year = year;
                 }
 
                 if (match.Groups.TryGetValue(SeriesNameMatchGroup, out Group? seriesGroup) && seriesGroup.Success)
                 {
-                    result.SeriesName = seriesGroup.Value.Trim();
+                    result.SeriesName = seriesGroup.ValueSpan.Trim().ToString();
                 }
 
                 break;

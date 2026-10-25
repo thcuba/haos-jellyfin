@@ -40,7 +40,7 @@ namespace Emby.Naming.TV
         public static SeasonPathParserResult Parse(string path, string? parentPath, bool supportSpecialAliases, bool supportNumericSeasonFolders)
         {
             var result = new SeasonPathParserResult();
-            var parentFolderName = parentPath is null ? null : new DirectoryInfo(parentPath).Name;
+            var parentFolderName = parentPath is null ? null : Path.GetFileName(parentPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
 
             var (seasonNumber, isSeasonFolder) = GetSeasonNumberFromPath(path, parentFolderName, supportSpecialAliases, supportNumericSeasonFolders);
 
@@ -73,7 +73,7 @@ namespace Emby.Naming.TV
 
             var seasonPrefixMatch = SeasonPrefix().Match(fileName);
             if (seasonPrefixMatch.Success &&
-                int.TryParse(seasonPrefixMatch.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var val))
+                int.TryParse(seasonPrefixMatch.Groups[1].ValueSpan, NumberStyles.Integer, CultureInfo.InvariantCulture, out var val))
             {
                 return (val, true);
             }
@@ -127,7 +127,7 @@ namespace Emby.Naming.TV
             var numberString = match.Groups["seasonnumber"];
             if (numberString.Success)
             {
-                if (int.TryParse(numberString.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seasonNumber))
+                if (int.TryParse(numberString.ValueSpan, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seasonNumber))
                 {
                     return (seasonNumber, true);
                 }
