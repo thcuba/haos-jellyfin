@@ -12,6 +12,7 @@ namespace Emby.Naming.TV
     public class EpisodeResolver
     {
         private readonly NamingOptions _options;
+        private readonly EpisodePathParser _episodePathParser;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EpisodeResolver"/> class.
@@ -20,6 +21,8 @@ namespace Emby.Naming.TV
         public EpisodeResolver(NamingOptions options)
         {
             _options = options;
+            // Cache stateless parser instance to prevent heap allocation per resolution call.
+            _episodePathParser = new EpisodePathParser(options);
         }
 
         /// <summary>
@@ -46,8 +49,8 @@ namespace Emby.Naming.TV
 
             if (!isDirectory)
             {
-                var extension = Path.GetExtension(path);
-                // Check supported extensions
+                var extension = Path.GetExtension(path.AsSpan());
+                // Check supported extensions using ReadOnlySpan<char> extension matching to avoid heap string allocations
                 if (!_options.VideoFileExtensions.Contains(extension, StringComparison.OrdinalIgnoreCase))
                 {
                     // It's not supported. Check stub extensions
@@ -59,12 +62,12 @@ namespace Emby.Naming.TV
                     isStub = true;
                 }
 
-                container = extension.TrimStart('.');
+                container = extension.TrimStart('.').ToString();
             }
 
             var format3DResult = Format3DParser.Parse(path, _options);
 
-            var parsingResult = new EpisodePathParser(_options)
+            var parsingResult = _episodePathParser
                 .Parse(path, isDirectory, isNamed, isOptimistic, supportsAbsoluteNumbers, fillExtendedInfo);
 
             if (!parsingResult.Success && !isStub)
