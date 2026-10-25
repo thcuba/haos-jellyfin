@@ -118,23 +118,4 @@ public class ExternalPathParserTests
         Assert.Equal(isForced, actual.IsForced);
         Assert.Equal(isHearingImpaired, actual.IsHearingImpaired);
     }
-
-    [Theory]
-    [InlineData("", null, null)]
-    [InlineData(".default", null, null, true, false)]
-    [InlineData(".forced", null, null, false, true)]
-    [InlineData(".en", null, "eng")]
-    [InlineData(".title.en.default.forced", "title", "eng", true, true)]
-    public void ParseFile_SpanOverload_ReturnsMatchingResults(string tokens, string? title, string? language, bool isDefault = false, bool isForced = false)
-    {
-        var path = "My.Video" + tokens + ".srt";
-
-        var actual = _subtitlePathParser.ParseFile(path, tokens.AsSpan());
-
-        Assert.NotNull(actual);
-        Assert.Equal(title, actual!.Title);
-        Assert.Equal(language, actual.Language);
-        Assert.Equal(isDefault, actual.IsDefault);
-        Assert.Equal(isForced, actual.IsForced);
-    }
 }

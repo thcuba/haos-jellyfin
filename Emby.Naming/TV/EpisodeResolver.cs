@@ -12,7 +12,6 @@ namespace Emby.Naming.TV
     public class EpisodeResolver
     {
         private readonly NamingOptions _options;
-        private readonly EpisodePathParser _episodePathParser;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EpisodeResolver"/> class.
@@ -20,8 +19,7 @@ namespace Emby.Naming.TV
         /// <param name="options"><see cref="NamingOptions"/> object containing VideoFileExtensions and passed to <see cref="StubResolver"/>, <see cref="Format3DParser"/> and <see cref="EpisodePathParser"/>.</param>
         public EpisodeResolver(NamingOptions options)
         {
-            this._options = options;
-            this._episodePathParser = new EpisodePathParser(options);
+            _options = options;
         }
 
         /// <summary>
@@ -43,20 +41,17 @@ namespace Emby.Naming.TV
             bool fillExtendedInfo = true)
         {
             bool isStub = false;
-            ReadOnlySpan<char> container = ReadOnlySpan<char>.Empty;
+            string? container = null;
             string? stubType = null;
 
             if (!isDirectory)
             {
-                // Optimization: Use Path.GetExtension(AsSpan()) to get ReadOnlySpan<char> extension
-                // without allocating intermediate string objects on every file resolution.
-                var extension = Path.GetExtension(path.AsSpan());
-
+                var extension = Path.GetExtension(path);
                 // Check supported extensions
-                if (!this._options.VideoFileExtensions.Contains(extension, StringComparison.OrdinalIgnoreCase))
+                if (!_options.VideoFileExtensions.Contains(extension, StringComparison.OrdinalIgnoreCase))
                 {
                     // It's not supported. Check stub extensions
-                    if (!StubResolver.TryResolveFile(path, this._options, out stubType))
+                    if (!StubResolver.TryResolveFile(path, _options, out stubType))
                     {
                         return null;
                     }
@@ -67,10 +62,9 @@ namespace Emby.Naming.TV
                 container = extension.TrimStart('.');
             }
 
-            var format3DResult = Format3DParser.Parse(path, this._options);
+            var format3DResult = Format3DParser.Parse(path, _options);
 
-            // Optimization: Use cached EpisodePathParser instance to avoid allocation per call.
-            var parsingResult = this._episodePathParser
+            var parsingResult = new EpisodePathParser(_options)
                 .Parse(path, isDirectory, isNamed, isOptimistic, supportsAbsoluteNumbers, fillExtendedInfo);
 
             if (!parsingResult.Success && !isStub)
@@ -80,7 +74,7 @@ namespace Emby.Naming.TV
 
             return new EpisodeInfo(path)
             {
-                Container = container.IsEmpty ? null : container.ToString(),
+                Container = container,
                 IsStub = isStub,
                 EndingEpisodeNumber = parsingResult.EndingEpisodeNumber,
                 EpisodeNumber = parsingResult.EpisodeNumber,
@@ -92,7 +86,7 @@ namespace Emby.Naming.TV
                 IsByDate = parsingResult.IsByDate,
                 Day = parsingResult.Day,
                 Month = parsingResult.Month,
-                Year = parsingResult.Year,
+                Year = parsingResult.Year
             };
         }
     }

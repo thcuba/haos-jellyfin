@@ -30,10 +30,10 @@ namespace Emby.Naming.Video
             ReadOnlySpan<char> pathSpan = path.AsSpan();
             ReadOnlySpan<char> fileName = Path.GetFileName(pathSpan);
             ReadOnlySpan<char> fileNameWithoutExtension = Path.GetFileNameWithoutExtension(pathSpan);
-            // Trim the digits from the end of the filename so we can recognize things like -trailer2
+            // Trim the digits from the end of the filename so we can recognize things like -trailer2 or sample1
             ReadOnlySpan<char> trimmedFileNameWithoutExtension = fileNameWithoutExtension.TrimEnd(_digits);
-            ReadOnlySpan<char> directoryPath = Path.GetDirectoryName(pathSpan);
-            ReadOnlySpan<char> directoryName = Path.GetFileName(directoryPath);
+            ReadOnlySpan<char> directoryName = Path.GetFileName(Path.GetDirectoryName(pathSpan));
+            string fullDirectory = Path.GetDirectoryName(pathSpan).ToString();
 
             foreach (ExtraRule rule in namingOptions.VideoExtraRules)
             {
@@ -43,15 +43,13 @@ namespace Emby.Naming.Video
                     continue;
                 }
 
-                // Optimization: Use ReadOnlySpan<char>.Equals with libraryRoot to avoid allocating a string for directoryPath on every call,
-                // and use rule.Regex.IsMatch(fileName) on ReadOnlySpan<char> to avoid string allocations for Regex extra rules.
                 bool isMatch = rule.RuleType switch
                 {
-                    ExtraRuleType.Filename => fileNameWithoutExtension.Equals(rule.Token, StringComparison.OrdinalIgnoreCase),
+                    ExtraRuleType.Filename => trimmedFileNameWithoutExtension.Equals(rule.Token, StringComparison.OrdinalIgnoreCase),
                     ExtraRuleType.Suffix => trimmedFileNameWithoutExtension.EndsWith(rule.Token, StringComparison.OrdinalIgnoreCase),
-                    ExtraRuleType.Regex => rule.Regex is not null && rule.Regex.IsMatch(fileName),
+                    ExtraRuleType.Regex => Regex.IsMatch(fileName, rule.Token, RegexOptions.IgnoreCase | RegexOptions.Compiled),
                     ExtraRuleType.DirectoryName => directoryName.Equals(rule.Token, StringComparison.OrdinalIgnoreCase)
-                                                 && !directoryPath.Equals(libraryRoot, StringComparison.OrdinalIgnoreCase),
+                                                 && !string.Equals(fullDirectory, libraryRoot, StringComparison.OrdinalIgnoreCase),
                     _ => false,
                 };
 

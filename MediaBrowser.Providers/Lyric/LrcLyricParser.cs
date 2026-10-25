@@ -59,76 +59,57 @@ public partial class LrcLyricParser : ILyricParser
             return null;
         }
 
-        if (lyricData.Lyrics.Count == 0)
+        List<LrcParser.Model.Lyric> sortedLyricData = lyricData.Lyrics.OrderBy(x => x.StartTime).ToList();
+
+        if (sortedLyricData.Count == 0)
         {
             return null;
         }
 
-        IReadOnlyList<LrcParser.Model.Lyric> sortedLyricData;
-        if (IsSorted(lyricData.Lyrics))
-        {
-            sortedLyricData = lyricData.Lyrics;
-        }
-        else
-        {
-            var list = lyricData.Lyrics.ToList();
-            list.Sort((a, b) => a.StartTime.CompareTo(b.StartTime));
-            sortedLyricData = list;
-        }
-
-        // Bolt optimization: Pre-allocate list capacity and avoid heap allocations during cue parsing
-        List<LyricLine> lyricList = new(sortedLyricData.Count);
+        List<LyricLine> lyricList = [];
         for (var lineIndex = 0; lineIndex < sortedLyricData.Count; lineIndex++)
         {
             var lyric = sortedLyricData[lineIndex];
 
             // Extract cues from time tags
-            var cues = new List<LyricLineCue>(lyric.TimeTags.Count);
+            var cues = new List<LyricLineCue>();
             if (lyric.TimeTags.Count > 0)
             {
-                // Bolt optimization: Enumerate SortedDictionary directly using struct enumerator to avoid
-                // Keys.ToList() heap allocations and O(log k) dictionary lookups. Use ReadOnlySpan.Trim() to avoid string slice allocations.
-                using var enumerator = lyric.TimeTags.GetEnumerator();
-                if (enumerator.MoveNext())
+                var keys = lyric.TimeTags.Keys.ToList();
+                for (var tagIndex = 0; tagIndex < keys.Count - 1; tagIndex++)
                 {
-                    var prevTag = enumerator.Current;
+                    var currentKey = keys[tagIndex];
+                    var nextKey = keys[tagIndex + 1];
 
-                    while (enumerator.MoveNext())
-                    {
-                        var currentTag = enumerator.Current;
-
-                        var currentKey = prevTag.Key;
-                        var nextKey = currentTag.Key;
-                        var currentMs = prevTag.Value ?? 0;
-                        var nextMs = currentTag.Value ?? 0;
-
-                        var currentPos = currentKey.State == IndexState.End ? currentKey.Index + 1 : currentKey.Index;
-                        var nextPos = nextKey.State == IndexState.End ? nextKey.Index + 1 : nextKey.Index;
-
-                        if (!lyric.Text.AsSpan(currentPos, nextPos - currentPos).Trim().IsEmpty)
-                        {
-                            cues.Add(new LyricLineCue(
-                                position: currentPos,
-                                endPosition: nextPos,
-                                start: TimeSpan.FromMilliseconds(currentMs).Ticks,
-                                end: TimeSpan.FromMilliseconds(nextMs).Ticks));
-                        }
-
-                        prevTag = currentTag;
-                    }
-
-                    var lastKey = prevTag.Key;
-                    var lastMs = prevTag.Value ?? 0;
-                    var lastPos = lastKey.State == IndexState.End ? lastKey.Index + 1 : lastKey.Index;
-
-                    if (!lyric.Text.AsSpan(lastPos).Trim().IsEmpty)
+                    var currentPos = currentKey.State == IndexState.End ? currentKey.Index + 1 : currentKey.Index;
+                    var nextPos = nextKey.State == IndexState.End ? nextKey.Index + 1 : nextKey.Index;
+                    var currentMs = lyric.TimeTags[currentKey] ?? 0;
+                    var nextMs = lyric.TimeTags[keys[tagIndex + 1]] ?? 0;
+                    var currentSlice = lyric.Text[currentPos..nextPos];
+                    var currentSliceTrimmed = currentSlice.Trim();
+                    if (currentSliceTrimmed.Length > 0)
                     {
                         cues.Add(new LyricLineCue(
-                            position: lastPos,
-                            endPosition: lyric.Text.Length,
-                            start: TimeSpan.FromMilliseconds(lastMs).Ticks,
-                            end: lineIndex + 1 < sortedLyricData.Count ? TimeSpan.FromMilliseconds(sortedLyricData[lineIndex + 1].StartTime).Ticks : null));
+                            position: currentPos,
+                            endPosition: nextPos,
+                            start: TimeSpan.FromMilliseconds(currentMs).Ticks,
+                            end: TimeSpan.FromMilliseconds(nextMs).Ticks));
                     }
+                }
+
+                var lastKey = keys[^1];
+                var lastPos = lastKey.State == IndexState.End ? lastKey.Index + 1 : lastKey.Index;
+                var lastMs = lyric.TimeTags[lastKey] ?? 0;
+                var lastSlice = lyric.Text[lastPos..];
+                var lastSliceTrimmed = lastSlice.Trim();
+
+                if (lastSliceTrimmed.Length > 0)
+                {
+                    cues.Add(new LyricLineCue(
+                        position: lastPos,
+                        endPosition: lyric.Text.Length,
+                        start: TimeSpan.FromMilliseconds(lastMs).Ticks,
+                        end: lineIndex + 1 < sortedLyricData.Count ? TimeSpan.FromMilliseconds(sortedLyricData[lineIndex + 1].StartTime).Ticks : null));
                 }
             }
 
@@ -137,18 +118,5 @@ public partial class LrcLyricParser : ILyricParser
         }
 
         return new LyricDto { Lyrics = lyricList };
-    }
-
-    private static bool IsSorted(IReadOnlyList<LrcParser.Model.Lyric> lyrics)
-    {
-        for (var i = 1; i < lyrics.Count; i++)
-        {
-            if (lyrics[i - 1].StartTime > lyrics[i].StartTime)
-            {
-                return false;
-            }
-        }
-
-        return true;
     }
 }

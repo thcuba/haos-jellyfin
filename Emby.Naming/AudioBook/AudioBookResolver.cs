@@ -11,7 +11,6 @@ namespace Emby.Naming.AudioBook
     public class AudioBookResolver
     {
         private readonly NamingOptions _options;
-        private readonly AudioBookFilePathParser _audioBookFilePathParser;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AudioBookResolver"/> class.
@@ -20,7 +19,6 @@ namespace Emby.Naming.AudioBook
         public AudioBookResolver(NamingOptions options)
         {
             _options = options;
-            _audioBookFilePathParser = new AudioBookFilePathParser(options);
         }
 
         /// <summary>
@@ -30,15 +28,13 @@ namespace Emby.Naming.AudioBook
         /// <returns>Returns <see cref="AudioBookResolver"/> object.</returns>
         public AudioBookFileInfo? Resolve(string path)
         {
-            // Optimization: Use Path.GetFileNameWithoutExtension(AsSpan()).IsEmpty to avoid allocating heap strings.
-            if (path.Length == 0 || Path.GetFileNameWithoutExtension(path.AsSpan()).IsEmpty)
+            if (path.Length == 0 || Path.GetFileNameWithoutExtension(path).Length == 0)
             {
                 // Return null to indicate this path will not be used, instead of stopping whole process with exception
                 return null;
             }
 
-            // Optimization: Use Path.GetExtension(AsSpan()) to get ReadOnlySpan<char> extension without string allocation.
-            var extension = Path.GetExtension(path.AsSpan());
+            var extension = Path.GetExtension(path);
 
             // Check supported extensions
             if (!_options.AudioFileExtensions.Contains(extension, StringComparison.OrdinalIgnoreCase))
@@ -46,11 +42,9 @@ namespace Emby.Naming.AudioBook
                 return null;
             }
 
-            var containerSpan = extension.TrimStart('.');
-            var container = containerSpan.IsEmpty ? string.Empty : containerSpan.ToString();
+            var container = extension.TrimStart('.');
 
-            // Optimization: Use cached AudioBookFilePathParser instance to avoid heap object allocation per call.
-            var parsingResult = _audioBookFilePathParser.Parse(path);
+            var parsingResult = new AudioBookFilePathParser(_options).Parse(path);
 
             return new AudioBookFileInfo(
                 path,

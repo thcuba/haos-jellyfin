@@ -105,26 +105,6 @@ namespace MediaBrowser.LocalMetadata.Images
             return false;
         }
 
-        private static int GetImageExtensionRank(string? extension)
-        {
-            if (string.IsNullOrEmpty(extension))
-            {
-                return -1;
-            }
-
-            var extSpan = extension.AsSpan();
-            var supported = BaseItem.SupportedImageExtensions;
-            for (var i = 0; i < supported.Length; i++)
-            {
-                if (extSpan.Equals(supported[i], StringComparison.OrdinalIgnoreCase))
-                {
-                    return i;
-                }
-            }
-
-            return -1;
-        }
-
         private static IEnumerable<FileSystemMetadata> GetFiles(BaseItem item, bool includeDirectories, IDirectoryService directoryService)
         {
             if (!item.IsFileProtocol)
@@ -140,13 +120,11 @@ namespace MediaBrowser.LocalMetadata.Images
                 return Enumerable.Empty<FileSystemMetadata>();
             }
 
-            // Bolt performance optimization: Use GetImageExtensionRank to perform zero-allocation span checks against BaseItem.SupportedImageExtensions
-            // and eliminate repeated Array.IndexOf string allocations and linear array scans during sorting.
             return directoryService.GetFileSystemEntries(path)
                 .Where(i =>
                     (includeDirectories && i.IsDirectory)
-                    || GetImageExtensionRank(i.Extension) >= 0)
-                .OrderBy(i => GetImageExtensionRank(i.Extension));
+                    || BaseItem.SupportedImageExtensions.Contains(i.Extension, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(i => Array.IndexOf(BaseItem.SupportedImageExtensions, i.Extension ?? string.Empty));
         }
 
         /// <inheritdoc />
@@ -185,7 +163,7 @@ namespace MediaBrowser.LocalMetadata.Images
             IEnumerable<FileSystemMetadata> files = paths.SelectMany(i => _fileSystem.GetFiles(i, BaseItem.SupportedImageExtensions, true, false));
 
             files = files
-                .OrderBy(i => GetImageExtensionRank(i.Extension));
+                .OrderBy(i => Array.IndexOf(BaseItem.SupportedImageExtensions, i.Extension ?? string.Empty));
 
             var list = new List<LocalImageInfo>();
 
@@ -204,16 +182,7 @@ namespace MediaBrowser.LocalMetadata.Images
                 }
             }
 
-            var fileNameWithoutExtension = item.FileNameWithoutExtension;
-            Span<char> imagePrefixBuffer = stackalloc char[string.IsNullOrEmpty(fileNameWithoutExtension) ? 1 : fileNameWithoutExtension.Length + 1];
-            ReadOnlySpan<char> imagePrefix = default;
-            if (!string.IsNullOrEmpty(fileNameWithoutExtension))
-            {
-                fileNameWithoutExtension.AsSpan().CopyTo(imagePrefixBuffer);
-                imagePrefixBuffer[fileNameWithoutExtension.Length] = '-';
-                imagePrefix = imagePrefixBuffer[..(fileNameWithoutExtension.Length + 1)];
-            }
-
+            var imagePrefix = item.FileNameWithoutExtension + "-";
             var isInMixedFolder = item.IsInMixedFolder;
 
             PopulatePrimaryImages(item, images, files, imagePrefix, isInMixedFolder);
@@ -286,7 +255,7 @@ namespace MediaBrowser.LocalMetadata.Images
             }
         }
 
-        private void PopulatePrimaryImages(BaseItem item, List<LocalImageInfo> images, List<FileSystemMetadata> files, ReadOnlySpan<char> imagePrefix, bool isInMixedFolder)
+        private void PopulatePrimaryImages(BaseItem item, List<LocalImageInfo> images, List<FileSystemMetadata> files, string imagePrefix, bool isInMixedFolder)
         {
             string[] imageFileNames;
 
@@ -342,7 +311,7 @@ namespace MediaBrowser.LocalMetadata.Images
             }
         }
 
-        private void PopulateBackdrops(BaseItem item, List<LocalImageInfo> images, List<FileSystemMetadata> files, ReadOnlySpan<char> imagePrefix, bool isInMixedFolder)
+        private void PopulateBackdrops(BaseItem item, List<LocalImageInfo> images, List<FileSystemMetadata> files, string imagePrefix, bool isInMixedFolder)
         {
             if (!string.IsNullOrEmpty(item.Path))
             {
@@ -350,16 +319,12 @@ namespace MediaBrowser.LocalMetadata.Images
 
                 if (!string.IsNullOrEmpty(name))
                 {
-                    Span<char> fanartBuffer = stackalloc char[name.Length + 7];
-                    name.AsSpan().CopyTo(fanartBuffer);
-                    "-fanart".AsSpan().CopyTo(fanartBuffer[name.Length..]);
-
-                    AddImage(files, images, fanartBuffer, ImageType.Backdrop, imagePrefix);
+                    AddImage(files, images, name + "-fanart", ImageType.Backdrop, imagePrefix);
 
                     // Support without the prefix if it's in its own folder
                     if (!isInMixedFolder)
                     {
-                        AddImage(files, images, fanartBuffer, ImageType.Backdrop);
+                        AddImage(files, images, name + "-fanart", ImageType.Backdrop);
                     }
                 }
             }
@@ -368,15 +333,8 @@ namespace MediaBrowser.LocalMetadata.Images
             PopulateBackdrops(images, files, imagePrefix, "background", "background-", isInMixedFolder, ImageType.Backdrop);
             PopulateBackdrops(images, files, imagePrefix, "art", "art-", isInMixedFolder, ImageType.Backdrop);
 
-            FileSystemMetadata? extraFanartFolder = null;
-            for (var i = 0; i < files.Count; i++)
-            {
-                if (string.Equals(files[i].Name, "extrafanart", StringComparison.OrdinalIgnoreCase))
-                {
-                    extraFanartFolder = files[i];
-                    break;
-                }
-            }
+            var extraFanartFolder = files
+                .FirstOrDefault(i => string.Equals(i.Name, "extrafanart", StringComparison.OrdinalIgnoreCase));
 
             if (extraFanartFolder is not null)
             {
@@ -397,33 +355,23 @@ namespace MediaBrowser.LocalMetadata.Images
             }));
         }
 
-        private void PopulateBackdrops(List<LocalImageInfo> images, List<FileSystemMetadata> files, ReadOnlySpan<char> imagePrefix, string firstFileName, string subsequentFileNamePrefix, bool isInMixedFolder, ImageType type)
+        private void PopulateBackdrops(List<LocalImageInfo> images, List<FileSystemMetadata> files, string imagePrefix, string firstFileName, string subsequentFileNamePrefix, bool isInMixedFolder, ImageType type)
         {
-            // Bolt performance optimization: Accept ReadOnlySpan<char> parameters and format numbered backdrop names into
-            // a stack-allocated buffer (stackalloc char[64]), eliminating heap string allocations during local image scanning.
-            AddImage(files, images, firstFileName, type, imagePrefix);
-
-            Span<char> nameBuffer = stackalloc char[64];
-            var prefixSpan = subsequentFileNamePrefix.AsSpan();
-            prefixSpan.CopyTo(nameBuffer);
+            AddImage(files, images, imagePrefix + firstFileName, type);
 
             var unfound = 0;
             for (var i = 1; i <= 20; i++)
             {
                 // Screenshot Image
-                if (i.TryFormat(nameBuffer[prefixSpan.Length..], out var charsWritten, provider: CultureInfo.InvariantCulture))
+                var found = AddImage(files, images, imagePrefix + subsequentFileNamePrefix + i, type);
+
+                if (!found)
                 {
-                    var nameSpan = nameBuffer[..(prefixSpan.Length + charsWritten)];
-                    var found = AddImage(files, images, nameSpan, type, imagePrefix);
+                    unfound++;
 
-                    if (!found)
+                    if (unfound >= 3)
                     {
-                        unfound++;
-
-                        if (unfound >= 3)
-                        {
-                            break;
-                        }
+                        break;
                     }
                 }
             }
@@ -437,19 +385,15 @@ namespace MediaBrowser.LocalMetadata.Images
                 for (var i = 1; i <= 20; i++)
                 {
                     // Screenshot Image
-                    if (i.TryFormat(nameBuffer[prefixSpan.Length..], out var charsWritten, provider: CultureInfo.InvariantCulture))
+                    var found = AddImage(files, images, subsequentFileNamePrefix + i, type);
+
+                    if (!found)
                     {
-                        var nameSpan = nameBuffer[..(prefixSpan.Length + charsWritten)];
-                        var found = AddImage(files, images, nameSpan, type);
+                        unfound++;
 
-                        if (!found)
+                        if (unfound >= 3)
                         {
-                            unfound++;
-
-                            if (unfound >= 3)
-                            {
-                                break;
-                            }
+                            break;
                         }
                     }
                 }
@@ -485,20 +429,14 @@ namespace MediaBrowser.LocalMetadata.Images
 
             foreach (var filename in filenamePrefixes)
             {
-                // Bolt performance optimization: Format seasonPrefix directly into a stack-allocated buffer and pass as ReadOnlySpan<char>,
-                // eliminating heap string allocations during season image lookups.
-                Span<char> seasonPrefixBuffer = stackalloc char[filename.Length + 1];
-                filename.AsSpan().CopyTo(seasonPrefixBuffer);
-                seasonPrefixBuffer[filename.Length] = '-';
-
-                AddImage(seriesFiles, images, "poster", ImageType.Primary, seasonPrefixBuffer);
-                AddImage(seriesFiles, images, "fanart", ImageType.Backdrop, seasonPrefixBuffer);
-                AddImage(seriesFiles, images, "banner", ImageType.Banner, seasonPrefixBuffer);
-                AddImage(seriesFiles, images, "landscape", ImageType.Thumb, seasonPrefixBuffer);
+                AddImage(seriesFiles, images, filename + "-poster", ImageType.Primary);
+                AddImage(seriesFiles, images, filename + "-fanart", ImageType.Backdrop);
+                AddImage(seriesFiles, images, filename + "-banner", ImageType.Banner);
+                AddImage(seriesFiles, images, filename + "-landscape", ImageType.Thumb);
             }
         }
 
-        private bool AddImage(List<FileSystemMetadata> files, List<LocalImageInfo> images, ReadOnlySpan<char> name, ReadOnlySpan<char> imagePrefix, bool isInMixedFolder, ImageType type)
+        private bool AddImage(List<FileSystemMetadata> files, List<LocalImageInfo> images, string name, string imagePrefix, bool isInMixedFolder, ImageType type)
         {
             var added = AddImage(files, images, name, type, imagePrefix);
 
@@ -513,7 +451,7 @@ namespace MediaBrowser.LocalMetadata.Images
             return added;
         }
 
-        private static bool AddImage(IReadOnlyList<FileSystemMetadata> files, List<LocalImageInfo> images, ReadOnlySpan<char> name, ImageType type, ReadOnlySpan<char> prefix = default)
+        private static bool AddImage(IReadOnlyList<FileSystemMetadata> files, List<LocalImageInfo> images, string name, ImageType type, string? prefix = null)
         {
             var image = GetImage(files, name, prefix);
 
@@ -531,9 +469,9 @@ namespace MediaBrowser.LocalMetadata.Images
             return true;
         }
 
-        private static FileSystemMetadata? GetImage(IReadOnlyList<FileSystemMetadata> files, ReadOnlySpan<char> name, ReadOnlySpan<char> prefix = default)
+        private static FileSystemMetadata? GetImage(IReadOnlyList<FileSystemMetadata> files, string name, string? prefix = null)
         {
-            var fileNameLength = name.Length + prefix.Length;
+            var fileNameLength = name.Length + (prefix?.Length ?? 0);
             for (var i = 0; i < files.Count; i++)
             {
                 var file = files[i];

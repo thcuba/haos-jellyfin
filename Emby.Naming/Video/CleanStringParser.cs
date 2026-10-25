@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
@@ -13,47 +12,13 @@ namespace Emby.Naming.Video
         /// <summary>
         /// Attempts to extract clean name with regular expressions.
         /// </summary>
-        /// <param name="name">Name of file as span.</param>
-        /// <param name="expressions">List of regex to parse name and year from.</param>
-        /// <param name="newName">Parsing result string.</param>
-        /// <returns>True if parsing was successful.</returns>
-        public static bool TryClean(ReadOnlySpan<char> name, IReadOnlyList<Regex> expressions, out string newName)
-        {
-            if (name.IsEmpty || expressions.Count == 0)
-            {
-                newName = string.Empty;
-                return false;
-            }
-
-            // Optimization: Defer string materialization until regex execution,
-            // eliminating heap allocations when inputs or expression lists are empty.
-            string? current = null;
-            bool cleaned = false;
-
-            for (int i = 0; i < expressions.Count; i++)
-            {
-                current ??= name.ToString();
-                if (TryClean(current, expressions[i], out newName))
-                {
-                    cleaned = true;
-                    current = newName;
-                }
-            }
-
-            newName = cleaned ? current! : string.Empty;
-            return cleaned;
-        }
-
-        /// <summary>
-        /// Attempts to extract clean name with regular expressions.
-        /// </summary>
         /// <param name="name">Name of file.</param>
         /// <param name="expressions">List of regex to parse name and year from.</param>
         /// <param name="newName">Parsing result string.</param>
         /// <returns>True if parsing was successful.</returns>
         public static bool TryClean([NotNullWhen(true)] string? name, IReadOnlyList<Regex> expressions, out string newName)
         {
-            if (string.IsNullOrEmpty(name) || expressions.Count == 0)
+            if (string.IsNullOrEmpty(name))
             {
                 newName = string.Empty;
                 return false;
@@ -79,9 +44,7 @@ namespace Emby.Naming.Video
             var match = expression.Match(name);
             if (match.Success && match.Groups.TryGetValue("cleaned", out var cleaned))
             {
-                // Optimization: Use ValueSpan.Trim().ToString() to slice on ReadOnlySpan<char>
-                // before allocating the single resulting string, avoiding intermediate string allocation.
-                newName = cleaned.ValueSpan.Trim().ToString();
+                newName = cleaned.Value.Trim();
                 return true;
             }
 

@@ -543,6 +543,12 @@ namespace Emby.Naming.Common
                     MediaType.Video),
 
                 new ExtraRule(
+                    ExtraType.Sample,
+                    ExtraRuleType.DirectoryName,
+                    "sample",
+                    MediaType.Video),
+
+                new ExtraRule(
                     ExtraType.Short,
                     ExtraRuleType.DirectoryName,
                     "shorts",
@@ -908,24 +914,12 @@ namespace Emby.Naming.Common
         public Regex[] CleanStringRegexes { get; private set; } = [];
 
         /// <summary>
-        /// Gets list of audiobook parts regular expressions.
-        /// </summary>
-        public Regex[] AudioBookPartsRegexes { get; private set; } = [];
-
-        /// <summary>
-        /// Gets list of audiobook names regular expressions.
-        /// </summary>
-        public Regex[] AudioBookNamesRegexes { get; private set; } = [];
-
-        /// <summary>
         /// Compiles raw regex strings into regexes.
         /// </summary>
         public void Compile()
         {
             CleanDateTimeRegexes = CleanDateTimes.Select(Compile).ToArray();
             CleanStringRegexes = CleanStrings.Select(Compile).ToArray();
-            AudioBookPartsRegexes = AudioBookPartsExpressions.Select(Compile).ToArray();
-            AudioBookNamesRegexes = AudioBookNamesExpressions.Select(Compile).ToArray();
         }
 
         private Regex Compile(string exp)

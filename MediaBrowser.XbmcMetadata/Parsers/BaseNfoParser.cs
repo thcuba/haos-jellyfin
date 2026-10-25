@@ -377,20 +377,15 @@ namespace MediaBrowser.XbmcMetadata.Parsers
 
                         if (!string.IsNullOrWhiteSpace(val))
                         {
-                            // Optimization: Use ReadOnlySpan<char> slicing with MemoryExtensions.Split('|')
-                            // and Enum.TryParse to parse MetadataField enums with zero string allocations or LINQ overhead.
-                            var valSpan = val.AsSpan();
-                            var lockedFields = new List<MetadataField>();
-                            foreach (var partSpan in valSpan.Split('|'))
+                            item.LockedFields = val.Split('|').Select(i =>
                             {
-                                var part = partSpan.Trim();
-                                if (Enum.TryParse(part, true, out MetadataField field))
+                                if (Enum.TryParse(i, true, out MetadataField field))
                                 {
-                                    lockedFields.Add(field);
+                                    return (MetadataField?)field;
                                 }
-                            }
 
-                            item.LockedFields = lockedFields.ToArray();
+                                return null;
+                            }).OfType<MetadataField>().ToArray();
                         }
 
                         break;
@@ -405,20 +400,10 @@ namespace MediaBrowser.XbmcMetadata.Parsers
 
                         if (!string.IsNullOrWhiteSpace(val))
                         {
-                            // Optimization: Use ReadOnlySpan<char> slicing with MemoryExtensions.Split('/')
-                            // to avoid intermediate string array allocations and LINQ iterators.
-                            var valSpan = val.AsSpan();
-                            var locations = new List<string>();
-                            foreach (var partSpan in valSpan.Split('/'))
-                            {
-                                var part = partSpan.Trim();
-                                if (!part.IsEmpty)
-                                {
-                                    locations.Add(part.ToString());
-                                }
-                            }
-
-                            item.ProductionLocations = locations.ToArray();
+                            item.ProductionLocations = val.Split('/')
+                                .Select(i => i.Trim())
+                                .Where(i => !string.IsNullOrWhiteSpace(i))
+                                .ToArray();
                         }
 
                         break;
@@ -470,16 +455,17 @@ namespace MediaBrowser.XbmcMetadata.Parsers
 
                         if (!string.IsNullOrWhiteSpace(val))
                         {
-                            // Optimization: Use ReadOnlySpan<char> slicing with MemoryExtensions.Split('/')
-                            // to eliminate string[] allocations and LINQ iterators.
-                            var valSpan = val.AsSpan();
-                            foreach (var partSpan in valSpan.Split('/'))
+                            var parts = val.Split('/').Select(i => i.Trim())
+                                .Where(i => !string.IsNullOrEmpty(i));
+
+                            foreach (var p in parts.Select(v => new PersonInfo { Name = v.Trim(), Type = PersonKind.Writer }))
                             {
-                                var part = partSpan.Trim();
-                                if (!part.IsEmpty)
+                                if (string.IsNullOrWhiteSpace(p.Name))
                                 {
-                                    itemResult.AddPerson(new PersonInfo { Name = part.ToString(), Type = PersonKind.Writer });
+                                    continue;
                                 }
+
+                                itemResult.AddPerson(p);
                             }
                         }
 
@@ -593,16 +579,13 @@ namespace MediaBrowser.XbmcMetadata.Parsers
 
                         if (!string.IsNullOrWhiteSpace(val))
                         {
-                            // Optimization: Use ReadOnlySpan<char> slicing with MemoryExtensions.Split('/')
-                            // to eliminate string[] allocations and LINQ iterators.
-                            var valSpan = val.AsSpan();
-                            foreach (var partSpan in valSpan.Split('/'))
+                            var parts = val.Split('/')
+                                .Select(i => i.Trim())
+                                .Where(i => !string.IsNullOrWhiteSpace(i));
+
+                            foreach (var p in parts)
                             {
-                                var part = partSpan.Trim();
-                                if (!part.IsEmpty)
-                                {
-                                    item.AddGenre(part.ToString());
-                                }
+                                item.AddGenre(p);
                             }
                         }
 

@@ -13,32 +13,15 @@ namespace Emby.Naming.Book
         private const string YearMatchGroup = "year";
         private const string SeriesNameMatchGroup = "seriesName";
 
-        // Performance optimization: Use C# 11 source-generated regexes instead of instantiating uncompiled Regex objects
-        // at runtime to eliminate allocation overhead and improve matching throughput.
-        [GeneratedRegex(@"^(?<seriesName>.+?)((\s\((?<seriesYear>[0-9]{4})\))?)\s#(?<index>[0-9]+)(?:\.0)?((\s\(of\s(?<count>[0-9]+)\))?)((\s\((?<year>[0-9]{4})\))?)$")]
-        private static partial Regex SeriesIndexYearRegex();
-
-        [GeneratedRegex(@"^(?<name>.+?)\s\((?<seriesName>.+?),\s#(?<index>[0-9]+)\)(?:\.0)?((\s\((?<year>[0-9]{4})\))?)$")]
-        private static partial Regex NameSeriesIndexRegex();
-
-        [GeneratedRegex(@"^(?<index>[0-9]+)(?:\.0)?\s\-\s(?<name>.+?)((\s\((?<year>[0-9]{4})\))?)$")]
-        private static partial Regex IndexNameRegex();
-
-        [GeneratedRegex(@"(?<name>.*)\((?<year>[0-9]{4})\)")]
-        private static partial Regex NameYearRegex();
-
-        [GeneratedRegex(@"(?<name>.*)")]
-        private static partial Regex CatchAllNameRegex();
-
         private static readonly Regex[] _nameMatches =
         [
             // seriesName (seriesYear) #index (of count) (year) where only seriesName and index are required
-            SeriesIndexYearRegex(),
-            NameSeriesIndexRegex(),
-            IndexNameRegex(),
-            NameYearRegex(),
+            new Regex(@"^(?<seriesName>.+?)((\s\((?<seriesYear>[0-9]{4})\))?)\s#(?<index>[0-9]+)(?:\.0)?((\s\(of\s(?<count>[0-9]+)\))?)((\s\((?<year>[0-9]{4})\))?)$"),
+            new Regex(@"^(?<name>.+?)\s\((?<seriesName>.+?),\s#(?<index>[0-9]+)\)(?:\.0)?((\s\((?<year>[0-9]{4})\))?)$"),
+            new Regex(@"^(?<index>[0-9]+)(?:\.0)?\s\-\s(?<name>.+?)((\s\((?<year>[0-9]{4})\))?)$"),
+            new Regex(@"(?<name>.*)\((?<year>[0-9]{4})\)"),
             // last resort matches the whole string as the name
-            CatchAllNameRegex()
+            new Regex(@"(?<name>.*)")
         ];
 
         [GeneratedRegex(@"^(?<name>.+?)(\sv(?<volume>[0-9]+))?(\sc(?<chapter>[0-9]+))?$")]
@@ -69,10 +52,7 @@ namespace Emby.Naming.Book
 
                 if (match.Groups.TryGetValue(NameMatchGroup, out Group? nameGroup) && nameGroup.Success)
                 {
-                    // Optimization: Trim nameGroup directly on ReadOnlySpan<char> and materialize a single string
-                    // shared between ComicRegex matching and result.Name, eliminating intermediate heap allocations.
-                    var nameStr = nameGroup.ValueSpan.Trim().ToString();
-                    var comicMatch = ComicRegex().Match(nameStr);
+                    var comicMatch = ComicRegex().Match(nameGroup.Value.Trim());
 
                     if (comicMatch.Success)
                     {
@@ -87,23 +67,22 @@ namespace Emby.Naming.Book
                         }
                     }
 
-                    result.Name = nameStr;
+                    result.Name = nameGroup.ValueSpan.Trim().ToString();
                 }
 
-                if (match.Groups.TryGetValue(IndexMatchGroup, out Group? indexGroup) && indexGroup.Success && int.TryParse(indexGroup.ValueSpan, out var index))
+                if (match.Groups.TryGetValue(IndexMatchGroup, out Group? indexGroup) && indexGroup.Success && int.TryParse(indexGroup.Value, out var index))
                 {
                     result.Index = index;
                 }
 
-                if (match.Groups.TryGetValue(YearMatchGroup, out Group? yearGroup) && yearGroup.Success && int.TryParse(yearGroup.ValueSpan, out var year))
+                if (match.Groups.TryGetValue(YearMatchGroup, out Group? yearGroup) && yearGroup.Success && int.TryParse(yearGroup.Value, out var year))
                 {
                     result.Year = year;
                 }
 
                 if (match.Groups.TryGetValue(SeriesNameMatchGroup, out Group? seriesGroup) && seriesGroup.Success)
                 {
-                    // Optimization: Use ValueSpan.Trim().ToString() to avoid intermediate string allocations.
-                    result.SeriesName = seriesGroup.ValueSpan.Trim().ToString();
+                    result.SeriesName = seriesGroup.Value.Trim();
                 }
 
                 break;

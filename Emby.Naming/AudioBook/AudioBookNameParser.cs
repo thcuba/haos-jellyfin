@@ -27,35 +27,31 @@ namespace Emby.Naming.AudioBook
         /// <returns>Returns <see cref="AudioBookNameParserResult"/> object.</returns>
         public AudioBookNameParserResult Parse(string name)
         {
-            if (string.IsNullOrEmpty(name))
-            {
-                return default;
-            }
-
             AudioBookNameParserResult result = default;
-
-            // Optimization: Break early once both Name and Year are matched
-            // to avoid running remaining expressions unnecessarily.
-            var regexes = _options.AudioBookNamesRegexes;
-            if (regexes.Length > 0)
+            foreach (var expression in _options.AudioBookNamesExpressions)
             {
-                foreach (var regex in regexes)
+                var match = Regex.Match(name, expression, RegexOptions.IgnoreCase);
+                if (match.Success)
                 {
-                    ProcessMatch(regex.Match(name), ref result);
-                    if (result.Name is not null && result.Year.HasValue)
+                    if (result.Name is null)
                     {
-                        break;
+                        var value = match.Groups["name"];
+                        if (value.Success)
+                        {
+                            result.Name = value.Value;
+                        }
                     }
-                }
-            }
-            else
-            {
-                foreach (var expression in _options.AudioBookNamesExpressions)
-                {
-                    ProcessMatch(Regex.Match(name, expression, RegexOptions.IgnoreCase), ref result);
-                    if (result.Name is not null && result.Year.HasValue)
+
+                    if (!result.Year.HasValue)
                     {
-                        break;
+                        var value = match.Groups["year"];
+                        if (value.Success)
+                        {
+                            if (int.TryParse(value.ValueSpan, NumberStyles.Integer, CultureInfo.InvariantCulture, out var intValue))
+                            {
+                                result.Year = intValue;
+                            }
+                        }
                     }
                 }
             }
@@ -66,30 +62,6 @@ namespace Emby.Naming.AudioBook
             }
 
             return result;
-        }
-
-        private static void ProcessMatch(Match match, ref AudioBookNameParserResult result)
-        {
-            if (match.Success)
-            {
-                if (result.Name is null)
-                {
-                    var value = match.Groups["name"];
-                    if (value.Success)
-                    {
-                        result.Name = value.Value;
-                    }
-                }
-
-                if (!result.Year.HasValue)
-                {
-                    var value = match.Groups["year"];
-                    if (value.Success && int.TryParse(value.ValueSpan, NumberStyles.Integer, CultureInfo.InvariantCulture, out var intValue))
-                    {
-                        result.Year = intValue;
-                    }
-                }
-            }
         }
     }
 }

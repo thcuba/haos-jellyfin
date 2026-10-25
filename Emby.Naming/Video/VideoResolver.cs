@@ -80,15 +80,13 @@ namespace Emby.Naming.Video
 
             var extraResult = ExtraRuleResolver.GetExtraInfo(path, namingOptions, libraryRoot);
 
-            string name;
+            var name = Path.GetFileNameWithoutExtension(path);
+
             int? year = null;
 
             if (parseName)
             {
-                // Bolt performance optimization: Pass ReadOnlySpan<char> filename directly to CleanDateTime
-                // and defer calling Path.GetFileNameWithoutExtension(path) to the else branch when parseName is false,
-                // eliminating 1 unneeded string heap allocation for 100% of video files resolved with parseName = true.
-                var cleanDateTimeResult = CleanDateTime(Path.GetFileNameWithoutExtension(path.AsSpan()), namingOptions);
+                var cleanDateTimeResult = CleanDateTime(name, namingOptions);
                 name = cleanDateTimeResult.Name;
                 year = cleanDateTimeResult.Year;
 
@@ -96,10 +94,6 @@ namespace Emby.Naming.Video
                 {
                     name = newName;
                 }
-            }
-            else
-            {
-                name = Path.GetFileNameWithoutExtension(path);
             }
 
             return new VideoFileInfo(
@@ -150,17 +144,6 @@ namespace Emby.Naming.Video
         public static bool TryCleanString([NotNullWhen(true)] string? name, NamingOptions namingOptions, out string newName)
         {
             return CleanStringParser.TryClean(name, namingOptions.CleanStringRegexes, out newName);
-        }
-
-        /// <summary>
-        /// Tries to get name and year from raw name span.
-        /// </summary>
-        /// <param name="name">Raw name span.</param>
-        /// <param name="namingOptions">The naming options.</param>
-        /// <returns>Returns <see cref="CleanDateTimeResult"/> with name and optional year.</returns>
-        public static CleanDateTimeResult CleanDateTime(ReadOnlySpan<char> name, NamingOptions namingOptions)
-        {
-            return CleanDateTimeParser.Clean(name, namingOptions.CleanDateTimeRegexes);
         }
 
         /// <summary>

@@ -87,23 +87,18 @@ public static class ContainerHelper
             return true;
         }
 
-        // Split input and profile containers using zero-allocation span enumerators.
-        // Bolt performance optimization: Re-create SpanSplit enumerator inside the inner loop so profileContainers is re-iterated properly without allocating heap objects.
         var allInputContainers = inputContainer.Split(',');
+        var allProfileContainers = profileContainers.SpanSplit(',');
         foreach (var container in allInputContainers)
         {
-            var trimmedContainer = container.Trim();
-            if (trimmedContainer.IsEmpty)
+            if (!container.IsEmpty)
             {
-                continue;
-            }
-
-            foreach (var profile in profileContainers.SpanSplit(','))
-            {
-                var trimmedProfile = profile.Trim();
-                if (!trimmedProfile.IsEmpty && trimmedContainer.Equals(trimmedProfile, StringComparison.OrdinalIgnoreCase))
+                foreach (var profile in allProfileContainers)
                 {
-                    return !isNegativeList;
+                    if (!profile.IsEmpty && container.Equals(profile, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return !isNegativeList;
+                    }
                 }
             }
         }
@@ -128,18 +123,12 @@ public static class ContainerHelper
             return true;
         }
 
-        // Use SpanSplit on inputContainer span to avoid string array allocations during profile lookup.
-        foreach (var container in inputContainer.SpanSplit(','))
+        var allInputContainers = Split(inputContainer);
+        foreach (var container in allInputContainers)
         {
-            var trimmedContainer = container.Trim();
-            if (trimmedContainer.IsEmpty)
-            {
-                continue;
-            }
-
             foreach (var profile in profileContainers)
             {
-                if (trimmedContainer.Equals(profile.AsSpan().Trim(), StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(profile, container, StringComparison.OrdinalIgnoreCase))
                 {
                     return !isNegativeList;
                 }

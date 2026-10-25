@@ -7,7 +7,6 @@ using System.Linq;
 using Emby.Naming.Common;
 using Emby.Naming.TV;
 using Emby.Server.Implementations.Library;
-using Jellyfin.Extensions;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
@@ -84,10 +83,8 @@ namespace Emby.Server.Implementations.Library.Resolvers.TV
                         return null;
                     }
 
-                    // Optimization: Use Path.GetExtension(file.AsSpan()) and Jellyfin.Extensions.Contains to eliminate
-                    // intermediate string heap allocations for every file enumerated during season folder resolution.
                     var hasAnyVideo = Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories)
-                        .Any(file => _namingOptions.VideoFileExtensions.Contains(Path.GetExtension(file.AsSpan()), StringComparison.OrdinalIgnoreCase));
+                        .Any(file => _namingOptions.VideoFileExtensions.Contains(Path.GetExtension(file)));
 
                     if (!hasAnyVideo)
                     {

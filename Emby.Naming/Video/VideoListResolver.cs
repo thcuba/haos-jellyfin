@@ -34,6 +34,9 @@ namespace Emby.Naming.Video
         [GeneratedRegex("[0-9]{2}[0-9]+[ip]", RegexOptions.IgnoreCase)]
         private static partial Regex ResolutionRegex();
 
+        [GeneratedRegex(@"^\[([^]]*)\]")]
+        private static partial Regex CheckMultiVersionRegex();
+
         /// <summary>
         /// Resolves alternative versions and extras from list of video files.
         /// </summary>
@@ -53,29 +56,13 @@ namespace Emby.Naming.Video
 
             var stackResult = StackResolver.Resolve(nonExtras, _namingOptions).ToList();
 
-            // Optimization: Collect stacked file paths into a HashSet to avoid O(N * S * F) linear searches
-            // and delegate allocations inside the loop for every video file in the library.
-            HashSet<string>? stackedFiles = null;
-            if (stackResult.Count > 0)
-            {
-                stackedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                for (var i = 0; i < stackResult.Count; i++)
-                {
-                    var files = stackResult[i].Files;
-                    for (var j = 0; j < files.Count; j++)
-                    {
-                        stackedFiles.Add(files[j]);
-                    }
-                }
-            }
-
             var remainingFiles = new List<VideoFileInfo>();
             var standaloneMedia = new List<VideoFileInfo>();
 
             for (var i = 0; i < videoInfos.Count; i++)
             {
                 var current = videoInfos[i];
-                if (stackedFiles is not null && stackedFiles.Contains(current.Path))
+                if (stackResult.Any(s => s.ContainsFile(current.Path, current.IsDirectory)))
                 {
                     continue;
                 }
@@ -203,20 +190,18 @@ namespace Emby.Naming.Video
                 testFilename = testFilename[folderName.Length..].Trim();
             }
 
-            // Pass ReadOnlySpan<char> directly to TryClean to defer string allocations until regex matching
-            if (CleanStringParser.TryClean(testFilename, _namingOptions.CleanStringRegexes, out var cleanName))
+            // There are no span overloads for regex unfortunately
+            if (CleanStringParser.TryClean(testFilename.ToString(), _namingOptions.CleanStringRegexes, out var cleanName))
             {
                 testFilename = cleanName.AsSpan().Trim();
             }
 
             // The CleanStringParser should have removed common keywords etc.
-            // Optimization: Replace CheckMultiVersionRegex().IsMatch(testFilename) with direct zero-allocation span checks
-            // to check if testFilename starts with '[' and contains a closing ']', bypassing the regex engine.
             return testFilename.IsEmpty
                    || testFilename[0] == '-'
                    || testFilename[0] == '_'
                    || testFilename[0] == '.'
-                   || (testFilename.Length >= 2 && testFilename[0] == '[' && testFilename[1..].IndexOf(']') != -1);
+                   || CheckMultiVersionRegex().IsMatch(testFilename);
         }
 
         private List<VideoInfo> GetEpisodesGroupedByVersion(List<VideoInfo> videos)
@@ -232,30 +217,7 @@ namespace Emby.Naming.Video
             for (var i = 0; i < videos.Count; i++)
             {
                 var video = videos[i];
-                var episodeResult = _episodePathParser.Parse(video.Files[0].Path, false);
-                string? key = null;
-                if (episodeResult.Success)
-                {
-                    if (episodeResult.IsByDate
-                        && episodeResult.Year.HasValue
-                        && episodeResult.Month.HasValue
-                        && episodeResult.Day.HasValue)
-                    {
-                        // Optimization: Use string.Create with CultureInfo.InvariantCulture instead of FormattableString.Invariant
-                        // to eliminate FormattableString boxing, delegate construction, and object array allocations.
-                        key = string.Create(
-                            CultureInfo.InvariantCulture,
-                            $"D{episodeResult.Year.Value}{episodeResult.Month.Value:D2}{episodeResult.Day.Value:D2}");
-                    }
-                    else if (episodeResult.EpisodeNumber.HasValue)
-                    {
-                        // Optimization: Use string.Create with CultureInfo.InvariantCulture instead of FormattableString.Invariant
-                        // to eliminate FormattableString boxing, delegate construction, and object array allocations.
-                        key = string.Create(
-                            CultureInfo.InvariantCulture,
-                            $"S{episodeResult.SeasonNumber ?? 0}E{episodeResult.EpisodeNumber.Value}");
-                    }
-                }
+                var key = GetEpisodeVersionKey(video.Files[0].Path);
 
                 if (key is null)
                 {
@@ -286,6 +248,29 @@ namespace Emby.Naming.Video
             return result;
         }
 
+        private string? GetEpisodeVersionKey(string path)
+        {
+            // Optimistic expressions are guesses, so they are not consulted here: merging is destructive,
+            // a file collapsed into the alternate versions of another one is no longer an episode of its own.
+            var episodeResult = _episodePathParser.Parse(path, false, isOptimistic: false, fillExtendedInfo: false);
+            if (!episodeResult.Success)
+            {
+                return null;
+            }
+
+            if (episodeResult.IsByDate)
+            {
+                return episodeResult.Year.HasValue && episodeResult.Month.HasValue && episodeResult.Day.HasValue
+                    ? FormattableString.Invariant(
+                        $"D{episodeResult.Year.Value}{episodeResult.Month.Value:D2}{episodeResult.Day.Value:D2}")
+                    : null;
+            }
+
+            return episodeResult.SeasonNumber.HasValue && episodeResult.EpisodeNumber.HasValue
+                ? FormattableString.Invariant($"S{episodeResult.SeasonNumber.Value}E{episodeResult.EpisodeNumber.Value}")
+                : null;
+        }
+
         private static VideoInfo OrganizeAlternateVersions(
             List<VideoInfo> videos,
             VideoInfo? primaryOverride = null,
@@ -293,63 +278,34 @@ namespace Emby.Naming.Video
         {
             if (videos.Count > 1)
             {
-                // Bolt performance optimization: Avoid multiple LINQ passes (Select, GroupBy, OrderBy, ThenBy, InsertRange).
-                // Single-pass categorization into items with resolution match vs without resolution match,
-                // followed by in-place sorting using _numericOrdinalComparer to eliminate allocations and LINQ overhead.
-                var withRes = new List<(string Filename, string ResValue, VideoInfo Video)>(videos.Count);
-                var withoutRes = new List<(string Filename, VideoInfo Video)>(videos.Count);
+                var groups = videos
+                    .Select(x => (filename: x.Files[0].FileNameWithoutExtension.ToString(), value: x))
+                    .Select(x => (x.filename, resolutionMatch: ResolutionRegex().Match(x.filename), x.value))
+                    .GroupBy(x => x.resolutionMatch.Success)
+                    .ToList();
 
-                for (var i = 0; i < videos.Count; i++)
+                videos = [];
+
+                foreach (var group in groups)
                 {
-                    var video = videos[i];
-                    var filename = video.Files[0].FileNameWithoutExtension.ToString();
-                    var match = ResolutionRegex().Match(filename);
-                    if (match.Success)
+                    if (group.Key)
                     {
-                        withRes.Add((filename, match.Value, video));
+                        videos.InsertRange(0, group
+                            .OrderByDescending(x => x.resolutionMatch.Value, _numericOrdinalComparer)
+                            .ThenBy(x => x.filename, _numericOrdinalComparer)
+                            .Select(x => x.value));
                     }
                     else
                     {
-                        withoutRes.Add((filename, video));
+                        videos.AddRange(group.OrderBy(x => x.filename, _numericOrdinalComparer).Select(x => x.value));
                     }
-                }
-
-                withRes.Sort((x, y) =>
-                {
-                    var cmp = _numericOrdinalComparer.Compare(y.ResValue, x.ResValue);
-                    return cmp != 0 ? cmp : _numericOrdinalComparer.Compare(x.Filename, y.Filename);
-                });
-
-                withoutRes.Sort((x, y) => _numericOrdinalComparer.Compare(x.Filename, y.Filename));
-
-                videos = new List<VideoInfo>(withRes.Count + withoutRes.Count);
-                for (var i = 0; i < withRes.Count; i++)
-                {
-                    videos.Add(withRes[i].Video);
-                }
-
-                for (var i = 0; i < withoutRes.Count; i++)
-                {
-                    videos.Add(withoutRes[i].Video);
                 }
             }
 
             // Prefer a stacked entry (more than one part) as primary
-            VideoInfo? primary = primaryOverride;
-            if (primary is null)
-            {
-                for (var i = 0; i < videos.Count; i++)
-                {
-                    if (videos[i].Files.Count > 1)
-                    {
-                        primary = videos[i];
-                        break;
-                    }
-                }
-
-                primary ??= videos[0];
-            }
-
+            var primary = primaryOverride
+                ?? videos.FirstOrDefault(v => v.Files.Count > 1)
+                ?? videos[0];
             videos.Remove(primary);
 
             primary.AlternateVersions = videos;

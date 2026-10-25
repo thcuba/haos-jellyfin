@@ -64,8 +64,7 @@ namespace Emby.Server.Implementations.Library.Resolvers
                 return false;
             }
 
-            // Optimization: Pass ReadOnlySpan<char> filename directly to CleanDateTimeParser.Clean to avoid heap string allocation
-            var cleanDateTimeResult = CleanDateTimeParser.Clean(Path.GetFileNameWithoutExtension(path.AsSpan()), _namingOptions.CleanDateTimeRegexes);
+            var cleanDateTimeResult = CleanDateTimeParser.Clean(Path.GetFileNameWithoutExtension(path), _namingOptions.CleanDateTimeRegexes);
             var name = cleanDateTimeResult.Name;
             var year = cleanDateTimeResult.Year;
 

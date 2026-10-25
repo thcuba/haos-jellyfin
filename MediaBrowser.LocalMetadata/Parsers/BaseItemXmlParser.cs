@@ -181,20 +181,15 @@ namespace MediaBrowser.LocalMetadata.Parsers
 
                         if (!string.IsNullOrWhiteSpace(val))
                         {
-                            // Optimization: Use ReadOnlySpan<char> slicing with MemoryExtensions.Split('|')
-                            // and Enum.TryParse to parse MetadataField enums with zero string allocations or LINQ overhead.
-                            var valSpan = val.AsSpan();
-                            var lockedFields = new List<MetadataField>();
-                            foreach (var partSpan in valSpan.Split('|'))
+                            item.LockedFields = val.Split('|').Select(i =>
                             {
-                                var part = partSpan.Trim();
-                                if (Enum.TryParse(part, true, out MetadataField field))
+                                if (Enum.TryParse(i, true, out MetadataField field))
                                 {
-                                    lockedFields.Add(field);
+                                    return (MetadataField?)field;
                                 }
-                            }
 
-                            item.LockedFields = lockedFields.ToArray();
+                                return null;
+                            }).Where(i => i.HasValue).Select(i => i!.Value).ToArray();
                         }
 
                         break;

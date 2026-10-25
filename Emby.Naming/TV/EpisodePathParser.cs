@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using Emby.Naming.Common;
 
 namespace Emby.Naming.TV
@@ -78,6 +79,14 @@ namespace Emby.Naming.TV
             if (result is not null && fillExtendedInfo)
             {
                 FillAdditional(path, result);
+
+                if (!string.IsNullOrEmpty(result.SeriesName))
+                {
+                    result.SeriesName = result.SeriesName
+                        .Trim()
+                        .Trim('_', '.', '-')
+                        .Trim();
+                }
             }
 
             return result ?? new EpisodePathParserResult();
@@ -147,7 +156,7 @@ namespace Emby.Naming.TV
                         // It avoids erroneous parsing of something like "series-s09e14-1080p.mkv" as a multi-episode from E14 to E108
                         int nextIndex = endingNumberGroup.Index + endingNumberGroup.Length;
                         if (nextIndex >= name.Length
-                            || !(char.IsAsciiDigit(name[nextIndex]) || name[nextIndex] is 'i' or 'I' or 'p' or 'P'))
+                            || !"0123456789iIpP".Contains(name[nextIndex], StringComparison.Ordinal))
                         {
                             // A range cannot end before it starts, so a lower number belongs to the episode title rather than to a range.
                             if (int.TryParse(endingNumberGroup.ValueSpan, NumberStyles.Integer, CultureInfo.InvariantCulture, out num)
@@ -158,14 +167,7 @@ namespace Emby.Naming.TV
                         }
                     }
 
-                    var seriesNameGroup = match.Groups["seriesname"];
-                    if (seriesNameGroup.Success)
-                    {
-                        // Optimization: Perform span trimming directly on ValueSpan before allocating string to eliminate intermediate untrimmed string allocation.
-                        var trimmedSpan = seriesNameGroup.ValueSpan.Trim().Trim("_.-").Trim();
-                        result.SeriesName = trimmedSpan.ToString();
-                    }
-
+                    result.SeriesName = match.Groups["seriesname"].Value;
                     result.Success = result.EpisodeNumber.HasValue;
                 }
                 else
@@ -200,48 +202,43 @@ namespace Emby.Naming.TV
 
         private void FillAdditional(string path, EpisodePathParserResult info)
         {
-            // Optimization: Iterate expression lists directly to avoid allocating temporary lists, LINQ enumerators, and List.InsertRange operations.
+            var expressions = _options.MultipleEpisodeExpressions.Where(i => i.IsNamed).ToList();
+
             if (string.IsNullOrEmpty(info.SeriesName))
             {
-                foreach (var expression in _options.EpisodeExpressions)
-                {
-                    if (expression.IsNamed && ProcessAdditionalExpression(path, info, expression))
-                    {
-                        return;
-                    }
-                }
+                expressions.InsertRange(0, _options.EpisodeExpressions.Where(i => i.IsNamed));
             }
 
-            foreach (var expression in _options.MultipleEpisodeExpressions)
-            {
-                if (expression.IsNamed && ProcessAdditionalExpression(path, info, expression))
-                {
-                    return;
-                }
-            }
+            FillAdditional(path, info, expressions);
         }
 
-        private static bool ProcessAdditionalExpression(string path, EpisodePathParserResult info, EpisodeExpression expression)
+        private void FillAdditional(string path, EpisodePathParserResult info, IEnumerable<EpisodeExpression> expressions)
         {
-            var result = Parse(path, expression);
-
-            if (!result.Success)
+            foreach (var i in expressions)
             {
-                return false;
-            }
+                var result = Parse(path, i);
 
-            if (string.IsNullOrEmpty(info.SeriesName))
-            {
-                info.SeriesName = result.SeriesName ?? string.Empty;
-            }
+                if (!result.Success)
+                {
+                    continue;
+                }
 
-            if (!info.EndingEpisodeNumber.HasValue && result.EndingEpisodeNumber >= info.EpisodeNumber)
-            {
-                info.EndingEpisodeNumber = result.EndingEpisodeNumber;
-            }
+                if (string.IsNullOrEmpty(info.SeriesName))
+                {
+                    info.SeriesName = result.SeriesName;
+                }
 
-            return !string.IsNullOrEmpty(info.SeriesName)
-                && (!info.EpisodeNumber.HasValue || info.EndingEpisodeNumber.HasValue);
+                if (!info.EndingEpisodeNumber.HasValue && result.EndingEpisodeNumber >= info.EpisodeNumber)
+                {
+                    info.EndingEpisodeNumber = result.EndingEpisodeNumber;
+                }
+
+                if (!string.IsNullOrEmpty(info.SeriesName)
+                    && (!info.EpisodeNumber.HasValue || info.EndingEpisodeNumber.HasValue))
+                {
+                    break;
+                }
+            }
         }
     }
 }

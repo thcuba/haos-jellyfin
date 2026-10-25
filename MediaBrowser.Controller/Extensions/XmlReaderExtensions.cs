@@ -13,9 +13,6 @@ namespace MediaBrowser.Controller.Extensions;
 /// </summary>
 public static class XmlReaderExtensions
 {
-    private static readonly char[] CommaSeparator = [','];
-    private static readonly char[] PipeSemicolonSeparators = ['|', ';'];
-
     /// <summary>
     /// Reads a trimmed string from the current node.
     /// </summary>
@@ -172,41 +169,16 @@ public static class XmlReaderExtensions
         // We have to be careful to not split names like Matthew, Jr.
         ReadOnlySpan<char> separator = !value.Contains('|', StringComparison.Ordinal)
             && !value.Contains(';', StringComparison.Ordinal)
-                ? CommaSeparator
-                : PipeSemicolonSeparators;
+                ? stackalloc[] { ',' }
+                : stackalloc[] { '|', ';' };
 
-        // Optimization: Iterate through span slices using IndexOfAny and ReadOnlySpan<char>.Trim() instead of
-        // .ToString().Split() which allocates intermediate string objects and a string[] array on the heap.
-        var span = value.AsSpan().Trim().Trim(separator);
-        if (span.IsEmpty)
+        foreach (var part in value.AsSpan().Trim().Trim(separator).ToString().Split(separator))
         {
-            return Array.Empty<string>();
-        }
-
-        var result = new List<string>();
-        while (!span.IsEmpty)
-        {
-            var index = span.IndexOfAny(separator);
-            ReadOnlySpan<char> partSpan;
-            if (index < 0)
+            if (!string.IsNullOrWhiteSpace(part))
             {
-                partSpan = span;
-                span = default;
-            }
-            else
-            {
-                partSpan = span[..index];
-                span = span[(index + 1)..];
-            }
-
-            partSpan = partSpan.Trim();
-            if (!partSpan.IsEmpty && !partSpan.IsWhiteSpace())
-            {
-                result.Add(partSpan.ToString());
+                yield return part.Trim();
             }
         }
-
-        return result;
     }
 
     /// <summary>

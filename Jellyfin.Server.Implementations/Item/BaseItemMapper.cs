@@ -34,6 +34,40 @@ public static class BaseItemMapper
     /// </summary>
     private static readonly ConcurrentDictionary<string, Type?> _typeMap = new ConcurrentDictionary<string, Type?>();
 
+    private static UserData[] DetachUserData(BaseItemEntity entity)
+    {
+        if (entity.UserData is null || entity.UserData.Count == 0)
+        {
+            return [];
+        }
+
+        var detached = new UserData[entity.UserData.Count];
+        var index = 0;
+        foreach (var userData in entity.UserData)
+        {
+            detached[index++] = new UserData
+            {
+                ItemId = userData.ItemId,
+                Item = null,
+                UserId = userData.UserId,
+                User = null,
+                CustomDataKey = userData.CustomDataKey,
+                Rating = userData.Rating,
+                PlaybackPositionTicks = userData.PlaybackPositionTicks,
+                PlayCount = userData.PlayCount,
+                IsFavorite = userData.IsFavorite,
+                LastPlayedDate = userData.LastPlayedDate,
+                Played = userData.Played,
+                AudioStreamIndex = userData.AudioStreamIndex,
+                SubtitleStreamIndex = userData.SubtitleStreamIndex,
+                Likes = userData.Likes,
+                RetentionDate = userData.RetentionDate
+            };
+        }
+
+        return detached;
+    }
+
     /// <summary>
     /// Maps a Entity to the DTO.
     /// </summary>
@@ -78,10 +112,7 @@ public static class BaseItemMapper
         dto.TotalBitrate = entity.TotalBitrate;
         dto.ExternalId = entity.ExternalId;
         dto.Size = entity.Size;
-
-        // Optimization: Fast-path pipe-delimited string splitting avoids string.Split allocations
-        // for null, empty, whitespace, and single-value metadata strings during database entity mapping.
-        dto.Genres = SplitPipeDelimited(entity.Genres);
+        dto.Genres = string.IsNullOrWhiteSpace(entity.Genres) ? [] : entity.Genres.Split('|');
         dto.DateCreated = entity.DateCreated ?? DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
         dto.DateModified = entity.DateModified ?? DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
         dto.ChannelId = entity.ChannelId ?? Guid.Empty;
@@ -90,7 +121,7 @@ public static class BaseItemMapper
         dto.OwnerId = entity.OwnerId ?? Guid.Empty;
         dto.Width = entity.Width.GetValueOrDefault();
         dto.Height = entity.Height.GetValueOrDefault();
-        dto.UserData = entity.UserData;
+        dto.UserData = DetachUserData(entity);
 
         if (entity.Provider is not null)
         {
@@ -112,9 +143,9 @@ public static class BaseItemMapper
             dto.Audio = (ProgramAudio)entity.Audio;
         }
 
-        dto.ProductionLocations = SplitPipeDelimited(entity.ProductionLocations, removeEmptyEntries: true);
-        dto.Studios = SplitPipeDelimited(entity.Studios);
-        dto.Tags = SplitPipeDelimited(entity.Tags);
+        dto.ProductionLocations = entity.ProductionLocations?.Split('|', StringSplitOptions.RemoveEmptyEntries) ?? [];
+        dto.Studios = entity.Studios?.Split('|') ?? [];
+        dto.Tags = string.IsNullOrWhiteSpace(entity.Tags) ? [] : entity.Tags.Split('|');
 
         if (dto is IHasProgramAttributes hasProgramAttributes)
         {
@@ -169,12 +200,12 @@ public static class BaseItemMapper
 
         if (dto is IHasArtist hasArtists)
         {
-            hasArtists.Artists = SplitPipeDelimited(entity.Artists, removeEmptyEntries: true);
+            hasArtists.Artists = entity.Artists?.Split('|', StringSplitOptions.RemoveEmptyEntries) ?? [];
         }
 
         if (dto is IHasAlbumArtist hasAlbumArtists)
         {
-            hasAlbumArtists.AlbumArtists = SplitPipeDelimited(entity.AlbumArtists, removeEmptyEntries: true);
+            hasAlbumArtists.AlbumArtists = entity.AlbumArtists?.Split('|', StringSplitOptions.RemoveEmptyEntries) ?? [];
         }
 
         if (dto is LiveTvProgram program)
@@ -505,26 +536,5 @@ public static class BaseItemMapper
         }
 
         return appHost.ReverseVirtualPath(path);
-    }
-
-    /// <summary>
-    /// Fast-path helper to split pipe-delimited strings in database entities into string arrays.
-    /// Avoids string.Split overhead and intermediate allocations for null, empty, whitespace, and single-value inputs.
-    /// </summary>
-    private static string[] SplitPipeDelimited(string? input, bool removeEmptyEntries = false)
-    {
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            return [];
-        }
-
-        var span = input.AsSpan();
-        int pipeIndex = span.IndexOf('|');
-        if (pipeIndex == -1)
-        {
-            return [input];
-        }
-
-        return input.Split('|', removeEmptyEntries ? StringSplitOptions.RemoveEmptyEntries : StringSplitOptions.None);
     }
 }

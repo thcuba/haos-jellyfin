@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Emby.Naming.Common;
@@ -39,17 +38,6 @@ namespace Emby.Naming.ExternalFiles
         /// <returns>Returns null or an <see cref="ExternalPathParserResult"/> object if parsing is successful.</returns>
         public ExternalPathParserResult? ParseFile(string path, string? extraString)
         {
-            return ParseFile(path, extraString.AsSpan());
-        }
-
-        /// <summary>
-        /// Parse filename and extract information.
-        /// </summary>
-        /// <param name="path">Path to file.</param>
-        /// <param name="extraSpan">Part of the filename only containing the extra information.</param>
-        /// <returns>Returns null or an <see cref="ExternalPathParserResult"/> object if parsing is successful.</returns>
-        public ExternalPathParserResult? ParseFile(string path, ReadOnlySpan<char> extraSpan)
-        {
             if (path.Length == 0)
             {
                 return null;
@@ -72,12 +60,10 @@ namespace Emby.Naming.ExternalFiles
 
             var pathInfo = new ExternalPathParserResult(path);
 
-            if (extraSpan.IsEmpty)
+            if (string.IsNullOrEmpty(extraString))
             {
                 return pathInfo;
             }
-
-            var extraString = extraSpan.ToString();
 
             foreach (var separator in _namingOptions.MediaFlagDelimiters)
             {
@@ -94,52 +80,52 @@ namespace Emby.Naming.ExternalFiles
                         break;
                     }
 
-                    var currentSliceSpan = languageString.AsSpan(lastSeparator);
-                    var currentSliceWithoutSeparatorSpan = currentSliceSpan[SeparatorLength..];
+                    string currentSlice = languageString[lastSeparator..];
+                    string currentSliceWithoutSeparator = currentSlice[SeparatorLength..];
 
-                    // Optimization: Use ReadOnlySpan<char> flag matching and string.Remove at lastSeparator to eliminate
-                    // intermediate string allocations and string.Replace search overhead during flag parsing.
-                    if (ContainsFlag(currentSliceWithoutSeparatorSpan, _namingOptions.MediaDefaultFlags))
+                    if (_namingOptions.MediaDefaultFlags.Any(s => currentSliceWithoutSeparator.Contains(s, StringComparison.OrdinalIgnoreCase)))
                     {
                         pathInfo.IsDefault = true;
-                        extraString = extraString.Remove(lastSeparator, currentSliceSpan.Length);
+                        extraString = extraString.Replace(currentSlice, string.Empty, StringComparison.OrdinalIgnoreCase);
+                        languageString = languageString[..lastSeparator];
+                        continue;
                     }
-                    else if (ContainsFlag(currentSliceWithoutSeparatorSpan, _namingOptions.MediaForcedFlags))
+
+                    if (_namingOptions.MediaForcedFlags.Any(s => currentSliceWithoutSeparator.Contains(s, StringComparison.OrdinalIgnoreCase)))
                     {
                         pathInfo.IsForced = true;
-                        extraString = extraString.Remove(lastSeparator, currentSliceSpan.Length);
+                        extraString = extraString.Replace(currentSlice, string.Empty, StringComparison.OrdinalIgnoreCase);
+                        languageString = languageString[..lastSeparator];
+                        continue;
+                    }
+
+                    // Try to translate to three character code
+                    var culture = _localizationManager.FindLanguageInfo(currentSliceWithoutSeparator);
+
+                    if (culture is not null && pathInfo.Language is null)
+                    {
+                        pathInfo.Language = culture.Name.Contains('-', StringComparison.OrdinalIgnoreCase)
+                                          ? culture.Name
+                                          : culture.ThreeLetterISOLanguageName;
+                        extraString = extraString.Replace(currentSlice, string.Empty, StringComparison.OrdinalIgnoreCase);
+                    }
+                    else if (culture is not null && pathInfo.Language == "hin")
+                    {
+                        // Hindi language code "hi" collides with a hearing impaired flag - use as Hindi only if no other language is set
+                        pathInfo.IsHearingImpaired = true;
+                        pathInfo.Language = culture.Name.Contains('-', StringComparison.OrdinalIgnoreCase)
+                                          ? culture.Name
+                                          : culture.ThreeLetterISOLanguageName;
+                        extraString = extraString.Replace(currentSlice, string.Empty, StringComparison.OrdinalIgnoreCase);
+                    }
+                    else if (_namingOptions.MediaHearingImpairedFlags.Any(s => currentSliceWithoutSeparator.Equals(s, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        pathInfo.IsHearingImpaired = true;
+                        extraString = extraString.Replace(currentSlice, string.Empty, StringComparison.OrdinalIgnoreCase);
                     }
                     else
                     {
-                        // Try to translate to three character code
-                        var currentSliceWithoutSeparator = currentSliceWithoutSeparatorSpan.ToString();
-                        var culture = _localizationManager.FindLanguageInfo(currentSliceWithoutSeparator);
-
-                        if (culture is not null && pathInfo.Language is null)
-                        {
-                            pathInfo.Language = culture.Name.Contains('-', StringComparison.OrdinalIgnoreCase)
-                                              ? culture.Name
-                                              : culture.ThreeLetterISOLanguageName;
-                            extraString = extraString.Remove(lastSeparator, currentSliceSpan.Length);
-                        }
-                        else if (culture is not null && pathInfo.Language == "hin")
-                        {
-                            // Hindi language code "hi" collides with a hearing impaired flag - use as Hindi only if no other language is set
-                            pathInfo.IsHearingImpaired = true;
-                            pathInfo.Language = culture.Name.Contains('-', StringComparison.OrdinalIgnoreCase)
-                                              ? culture.Name
-                                              : culture.ThreeLetterISOLanguageName;
-                            extraString = extraString.Remove(lastSeparator, currentSliceSpan.Length);
-                        }
-                        else if (EqualsFlag(currentSliceWithoutSeparatorSpan, _namingOptions.MediaHearingImpairedFlags))
-                        {
-                            pathInfo.IsHearingImpaired = true;
-                            extraString = extraString.Remove(lastSeparator, currentSliceSpan.Length);
-                        }
-                        else
-                        {
-                            titleString = currentSliceSpan.ToString() + titleString;
-                        }
+                        titleString = currentSlice + titleString;
                     }
 
                     languageString = languageString[..lastSeparator];
@@ -149,32 +135,6 @@ namespace Emby.Naming.ExternalFiles
             }
 
             return pathInfo;
-        }
-
-        private static bool ContainsFlag(ReadOnlySpan<char> slice, IReadOnlyList<string> flags)
-        {
-            for (var i = 0; i < flags.Count; i++)
-            {
-                if (slice.Contains(flags[i], StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private static bool EqualsFlag(ReadOnlySpan<char> slice, IReadOnlyList<string> flags)
-        {
-            for (var i = 0; i < flags.Count; i++)
-            {
-                if (slice.Equals(flags[i], StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
     }
 }

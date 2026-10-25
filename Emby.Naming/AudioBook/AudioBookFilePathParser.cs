@@ -28,69 +28,40 @@ namespace Emby.Naming.AudioBook
         /// <returns>Returns <see cref="AudioBookFilePathParser"/> object.</returns>
         public AudioBookFilePathParserResult Parse(string path)
         {
-            if (string.IsNullOrEmpty(path))
-            {
-                return default;
-            }
-
             AudioBookFilePathParserResult result = default;
             var fileName = Path.GetFileNameWithoutExtension(path);
-            if (string.IsNullOrEmpty(fileName))
+            foreach (var expression in _options.AudioBookPartsExpressions)
             {
-                return default;
-            }
-
-            // Optimization: Break early once both ChapterNumber and PartNumber are matched
-            // to avoid running remaining expressions unnecessarily during audiobook scanning.
-            var regexes = _options.AudioBookPartsRegexes;
-            if (regexes.Length > 0)
-            {
-                foreach (var regex in regexes)
+                var match = Regex.Match(fileName, expression, RegexOptions.IgnoreCase);
+                if (match.Success)
                 {
-                    ProcessMatch(regex.Match(fileName), ref result);
-                    if (result.ChapterNumber.HasValue && result.PartNumber.HasValue)
+                    if (!result.ChapterNumber.HasValue)
                     {
-                        break;
+                        var value = match.Groups["chapter"];
+                        if (value.Success)
+                        {
+                            if (int.TryParse(value.ValueSpan, NumberStyles.Integer, CultureInfo.InvariantCulture, out var intValue))
+                            {
+                                result.ChapterNumber = intValue;
+                            }
+                        }
                     }
-                }
-            }
-            else
-            {
-                foreach (var expression in _options.AudioBookPartsExpressions)
-                {
-                    ProcessMatch(Regex.Match(fileName, expression, RegexOptions.IgnoreCase), ref result);
-                    if (result.ChapterNumber.HasValue && result.PartNumber.HasValue)
+
+                    if (!result.PartNumber.HasValue)
                     {
-                        break;
+                        var value = match.Groups["part"];
+                        if (value.Success)
+                        {
+                            if (int.TryParse(value.ValueSpan, NumberStyles.Integer, CultureInfo.InvariantCulture, out var intValue))
+                            {
+                                result.PartNumber = intValue;
+                            }
+                        }
                     }
                 }
             }
 
             return result;
-        }
-
-        private static void ProcessMatch(Match match, ref AudioBookFilePathParserResult result)
-        {
-            if (match.Success)
-            {
-                if (!result.ChapterNumber.HasValue)
-                {
-                    var value = match.Groups["chapter"];
-                    if (value.Success && int.TryParse(value.ValueSpan, NumberStyles.Integer, CultureInfo.InvariantCulture, out var intValue))
-                    {
-                        result.ChapterNumber = intValue;
-                    }
-                }
-
-                if (!result.PartNumber.HasValue)
-                {
-                    var value = match.Groups["part"];
-                    if (value.Success && int.TryParse(value.ValueSpan, NumberStyles.Integer, CultureInfo.InvariantCulture, out var intValue))
-                    {
-                        result.PartNumber = intValue;
-                    }
-                }
-            }
         }
     }
 }
