@@ -1,0 +1,119 @@
+## 2026-09-14 - Zero-allocation parsing in EpisodePathParser
+
+**Learning:** Chained string `.Trim()` calls (e.g., `.Trim().Trim('_', '.', '-').Trim()`) create multiple intermediate string allocations. Using `AsSpan().Trim().Trim("_.-").Trim().ToString()` performs all slicing on `ReadOnlySpan<char>` and allocates only a single string at the end. Additionally, LINQ `.Where().ToList()` and `InsertRange` in expression loop helpers (like `FillAdditional`) allocate lists and enumerators on every parse call.
+
+**Action:** Prefer `ReadOnlySpan<char>` extension methods for multi-step string cleaning, and iterate expression collections directly rather than constructing temporary `List<T>` instances.
+
+## 2026-09-15 - Zero-allocation regex group trimming in SeriesPathParser
+
+**Learning:** Slicing regex groups using `Group.ValueSpan.Trim(" _.-")` before `.ToString()` avoids allocating intermediate string objects when group parsing fails or when trimming characters from matched groups, and eliminates heap-allocated `char[]` params arrays from `string.Trim(params char[])`.
+
+**Action:** Prefer inspecting `Group.ValueSpan` directly and performing span trimming with literal string representations of characters before materializing strings.
+
+## 2026-09-16 - Span flag matching in ExternalPathParser
+
+**Learning:** In string/path token parsers, using LINQ `.Any(s => slice.Contains(s, ...))` or `.Any(s => slice.Equals(s, ...))` on flag lists instantiates delegate closures, enumerators, and substring allocations per loop iteration. Passing `ReadOnlySpan<char>` to a simple `for` loop helper calling `slice.Contains(flag, StringComparison.OrdinalIgnoreCase)` or `slice.Equals(flag, StringComparison.OrdinalIgnoreCase)` is completely zero-allocation.
+
+**Action:** Replace `list.Any(s => span.Contains(s))` with a static indexed loop helper taking `ReadOnlySpan<char>`.
+
+## 2026-09-17 - Allocation-free path extraction in SeasonPathParser
+
+**Learning:** Constructing `new DirectoryInfo(path).Name` during path parsing allocates `DirectoryInfo` heap objects and incurs OS path initialization overhead on every call. Using `Path.GetFileName(parentPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))` extracts directory names entirely through string manipulation with zero extra heap objects or OS overhead.
+
+**Action:** Prefer `Path.GetFileName` on trimmed path strings over `new DirectoryInfo(path).Name` when extracting parent directory names.
+
+## 2026-09-18 - Zero-allocation directory path matching in ExtraRuleResolver
+
+**Learning:** `Path.GetDirectoryName(pathSpan)` returns `ReadOnlySpan<char>`. Calling `.ToString()` on it to compare with `libraryRoot` allocates heap string objects on every item during library scans. `ReadOnlySpan<char>.Equals(libraryRoot, StringComparison.OrdinalIgnoreCase)` compares directory path spans directly with `string?` / `ReadOnlySpan<char>` without allocating heap objects.
+
+**Action:** Use `Path.GetDirectoryName(pathSpan).Equals(libraryRoot, StringComparison.OrdinalIgnoreCase)` directly on `ReadOnlySpan<char>` spans instead of converting directory path spans to `string` with `.ToString()`.
+
+## 2026-09-23 - Zero-allocation file extension resolution in EpisodeResolver
+
+**Learning:** Calling `Path.GetExtension(path)` allocates a heap string for the file extension on every file resolution, and instantiating stateless parser helpers (like `EpisodePathParser`) per resolution call creates unnecessary heap allocations. Using `Path.GetExtension(path.AsSpan())` with `Jellyfin.Extensions.Contains(ReadOnlySpan<char>, StringComparison)` eliminates string allocations during option matching, and caching stateless parser objects as class fields avoids object allocation during library scans.
+
+**Action:** Use `Path.GetExtension(path.AsSpan())` for extension matching and field-cache stateless sub-parsers in resolver classes.
+
+## 2026-09-24 - Zero-allocation prefix check in AlbumParser
+
+**Learning:** Running `CleanRegex().Replace(filename, " ")` before checking option prefixes allocates string objects for 100% of audio files during music scans. Checking `filename.AsSpan().TrimStart(" -._()\t").StartsWith(prefix, StringComparison.OrdinalIgnoreCase)` on `ReadOnlySpan<char>` before regex replacement bypasses regex engine execution and eliminates string allocations for all non-multi-part tracks.
+
+**Action:** Check prefix matches on trimmed `ReadOnlySpan<char>` spans before running expensive regex normalizations.
+
+## 2026-09-26 - Pre-compiled regex properties in NamingOptions
+
+**Learning:** Calling static `Regex.Match(input, patternString, RegexOptions)` repeatedly in loop iterations queries internal `RegexCache` string keys or instantiates regex pattern objects on every file. Pre-compiling `string[]` expression arrays into `Regex[]` properties in `NamingOptions.Compile()` and executing `regex.Match(input)` directly completely eliminates string lookup overhead during library scans.
+
+**Action:** Expose pre-compiled `Regex[]` properties populated during `NamingOptions.Compile()` for expression collections, and iterate `Regex[]` arrays in parser classes instead of passing raw string patterns to `Regex.Match`.
+
+## 2026-09-27 - Zero-allocation string creation in VideoListResolver
+
+**Learning:** Using `FormattableString.Invariant($"...")` boxes formatted value types, constructs a `FormattableString` object, and allocates an `object[]` arguments array per invocation. Replacing `FormattableString.Invariant` with `string.Create(CultureInfo.InvariantCulture, $"...")` leverages C# interpolated string handlers to format directly into the string memory without `FormattableString` boxing or argument array allocations.
+
+**Action:** Prefer `string.Create(CultureInfo.InvariantCulture, $"...")` over `FormattableString.Invariant($"...")` when building formatted keys or identifiers in tight processing loops.
+
+## 2026-09-28 - Zero-allocation stream index lookup in EncodingHelper
+
+**Learning:** Using `.Where().ToList().IndexOf()` on a collection allocates a closure delegate, a LINQ iterator object, a temporary `List<T>`, and a heap array. An indexed `for` loop with early `break` calculates stream offsets in a single pass with zero heap allocations.
+
+**Action:** Replace `.Where().ToList().IndexOf()` calls on collections with indexed `for` loops and early termination.
+
+## 2026-09-29 - Zero-allocation array string splitting in XmlReaderExtensions
+
+**Learning:** Calling `.ToString().Split(separator)` on a `ReadOnlySpan<char>` allocates an intermediate heap string for the trimmed node text and a heap `string[]` array containing elements. Iterating span slices directly with `IndexOfAny(separator)` and `ReadOnlySpan<char>.Trim()` materializes `string` objects only for non-whitespace yielded items, eliminating all intermediate string and array allocations during XML NFO metadata parsing.
+
+**Action:** Iterate string span slices with `IndexOfAny` and `ReadOnlySpan<char>.Trim()` instead of calling `.ToString().Split()` when parsing delimited string content in XML readers.
+
+## 2026-09-30 - O(1) stacked file lookup in VideoListResolver
+
+**Learning:** Calling `stackResult.Any(s => s.ContainsFile(current.Path, current.IsDirectory))` inside a loop over video files executes an $O(N \times S \times F)$ linear scan and allocates lambda delegates per file. Collecting stacked file paths into a `HashSet<string>(StringComparer.OrdinalIgnoreCase)` beforehand reduces lookups to $O(1)$ and eliminates all loop delegate allocations.
+
+**Action:** Pre-index file collections into a `HashSet<string>` with appropriate string comparison before checking membership in nested video resolution loops.
+
+## 2026-10-01 - Single-pass stack-allocated tokenization in Format3DParser
+
+**Learning:** Repeatedly tokenizing a path string for each 3D format rule in `Format3DParser` causes $O(N \times R)$ repeated delimiter searches and span slicing. Tokenizing the path span once into a `stackalloc ReadOnlySpan<char>[128]` buffer reduces path scanning to $O(N)$ single-pass tokenization with zero heap allocations. Remember to clear the tracking span (`remaining = default`) when `IndexOfAny` returns `-1` to ensure tokenization terminates cleanly and avoids unnecessary fallback paths.
+
+**Action:** Tokenize path spans once into `stackalloc ReadOnlySpan<char>[]` buffers before checking rules, and make sure `remaining` span state is cleared when processing the final token.
+
+## 2026-10-02 - Span lookups on FrozenSet and FrozenDictionary in MimeTypes
+
+**Learning:** Using `.GetAlternateLookup<ReadOnlySpan<char>>()` on `FrozenDictionary` and `FrozenSet` instances along with `Path.GetExtension(path.AsSpan())` and `ReadOnlySpan<char>` slicing allows checking MIME types and extensions with zero string heap allocations per request or file probe.
+
+**Action:** Prefer calling `.GetAlternateLookup<ReadOnlySpan<char>>()` on `FrozenDictionary` and `FrozenSet` collections when performing string lookups with span inputs.
+
+## 2026-10-03 - Zero-allocation prefix parameter passing in LocalImageProvider
+
+**Learning:** Concatenating prefix and filename strings (e.g. `imagePrefix + firstFileName`, `imagePrefix + subsequentFileNamePrefix + i`, `filename + "-poster"`) before passing them to lookup methods allocates heap string objects on every backdrop and image check. `GetImage` already accepts an optional `prefix` parameter and performs zero-allocation span checks (`fileName.StartsWith(prefix, ...) && fileName.EndsWith(name, ...)`).
+
+**Action:** Pass `prefix` parameters directly to filename lookup routines instead of concatenating strings before calling them.
+
+## 2026-10-04 - Zero-allocation span slicing in BaseItemXmlParser and BaseNfoParser
+
+**Learning:** Parsing delimited string fields in metadata parsers using `val.Split('|')` or `val.Split('/')` with LINQ queries (`.Select()`, `.Where()`, `.OfType()`) allocates intermediate `string[]` arrays, token strings, delegate closures, and LINQ iterator objects per element during library scans. Using `MemoryExtensions.Split()` on `ReadOnlySpan<char>` slices tokens with zero string allocations and allows parsing enums directly via `Enum.TryParse<T>(partSpan, ignoreCase: true, out var field)`.
+
+**Action:** Use `MemoryExtensions.Split()` on `ReadOnlySpan<char>` for delimited string field parsing in metadata XML/NFO readers to eliminate heap array and string allocations.
+
+## 2026-10-05 - Deferred string materialization in CleanStringParser
+
+**Learning:** Calling `testFilename.ToString()` on a `ReadOnlySpan<char>` before passing it to regex helpers like `CleanStringParser.TryClean` allocates heap string objects regardless of whether the expression collection or input span is empty. Accepting `ReadOnlySpan<char>` in `CleanStringParser.TryClean` and deferring string materialization (`current ??= name.ToString()`) until actual regex evaluation eliminates string allocations on empty inputs, empty expression lists, and early exits.
+
+**Action:** Accept `ReadOnlySpan<char>` parameters in string-cleaning parser overloads and defer `string` conversion until regex evaluation is actually required.
+
+## 2026-10-06 - Early regex loop termination in AudioBook parsers
+
+**Learning:** Continuing regex expression loops in `AudioBookFilePathParser` and `AudioBookNameParser` after all target properties (`ChapterNumber` & `PartNumber` or `Name` & `Year`) are populated executes redundant `Regex.Match` calls on remaining patterns that cannot affect the result. Breaking early as soon as all target fields are populated eliminates unnecessary regex engine evaluations during audiobook library scans. Additionally, conditionally replacing spaces in strings (`name.Contains(' ') ? name.Replace(' ', '.') : null`) in `AudioBookListResolver` avoids heap string allocations and duplicate `Contains` checks when no spaces exist.
+
+**Action:** Add early break guards inside regex evaluation loops once all target match properties are populated, and condition string replacements on character existence.
+
+## 2026-10-07 - O(1) season resolution in SeriesMetadataService
+
+**Learning:** Calling `seasons.Find(s => s.IndexNumber == episode.ParentIndexNumber)` inside child reconciliation loops executes $O(E \times S)$ linear scans over seasons and allocates lambda closures per episode. Pre-indexing seasons into a `Dictionary<int, Season>` using `TryAdd` prior to looping over children reduces season lookups to $O(1)$ complexity and eliminates per-episode delegate allocations.
+
+**Action:** Pre-index season collections into a `Dictionary<int, Season>` using `TryAdd` before iterating episodes in series metadata services.
+
+## 2026-10-08 - Stackalloc buffer formatting in LocalImageProvider
+
+**Learning:** Formatting numbered backdrop image names (e.g., `fanart-1`, `background-2`) into a `stackalloc char[64]` buffer using `i.TryFormat(buffer[prefixSpan.Length..], ...)` and passing `ReadOnlySpan<char>` to `AddImage`/`GetImage` eliminates up to 160 heap string allocations per item scanned in `LocalImageProvider`.
+
+**Action:** Format numbered filenames and prefixes into stack-allocated character buffers when querying local media files in loops.
