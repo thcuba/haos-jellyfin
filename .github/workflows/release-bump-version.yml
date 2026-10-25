@@ -1,0 +1,44 @@
+name: Bump Version
+on:
+  workflow_dispatch:
+  # NOTE: il bump NON è schedulato perché la versione dell'add-on è vincolata
+  # alla release upstream linuxserver/jellyfin (vedi build.yaml / Dockerfile).
+  # Un bump automatico a X.Y.(Z+1) punterebbe a un'immagine upstream inesistente
+  # e romperebbe il build. Bump manuale solo quando esce una nuova Jellyfin.
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    if: contains(github.repository, 'haos-jellyfin')
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Calculate next version
+        run: |
+          VERSION=$(yq -r '.version' haos-jellyfin/config.yaml)
+          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+          MINOR=$(echo "$VERSION" | cut -d. -f2)
+          PATCH=$(echo "$VERSION" | cut -d. -f3)
+          NEXT_PATCH=$((PATCH + 1))
+          NEXT_VERSION="${MAJOR}.${MINOR}.${NEXT_PATCH}"
+          echo "NEXT_VERSION=$NEXT_VERSION" >> $GITHUB_ENV
+
+      - name: Bump version in config and template files
+        run: |
+          chmod +x bump_version.py
+          ./bump_version.py "${{ env.NEXT_VERSION }}"
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: version-bump-${{ env.NEXT_VERSION }}
+          title: "Bump version to ${{ env.NEXT_VERSION }}"
+          body: |
+            Automated version bump to ${{ env.NEXT_VERSION }}.
+            Please review and merge if acceptable.
+          base: master

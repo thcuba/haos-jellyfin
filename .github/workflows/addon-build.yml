@@ -1,0 +1,67 @@
+name: Addon Build
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'haos-jellyfin/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    if: contains(github.repository, 'haos-jellyfin')
+    strategy:
+      matrix:
+        arch: [amd64, aarch64]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup EnvVars
+        run: |
+          VERSION=$(yq -r '.version' haos-jellyfin/config.yaml)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          # Lowercase the repository owner for docker image naming
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "OWNER=$OWNER" >> $GITHUB_ENV
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./haos-jellyfin
+          platforms: linux/${{ matrix.arch }}
+          push: true
+          tags: |
+            ghcr.io/${{ env.OWNER }}/haos-jellyfin-${{ matrix.arch }}:latest
+            ghcr.io/${{ env.OWNER }}/haos-jellyfin-${{ matrix.arch }}:${{ env.VERSION }}
+
+      - name: Create Release
+        if: github.event_name == 'push' && matrix.arch == 'amd64'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: Release v${{ env.VERSION }}
+          body: |
+            ## Jellyfin Media Server v${{ env.VERSION }}
+            - Compatible with Home Assistant OS (amd64/aarch64)
+            - Hardware acceleration via VA-API/Vulkan
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
