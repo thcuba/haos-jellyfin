@@ -258,7 +258,7 @@ namespace MediaBrowser.Providers.MediaInfo
                     && prefix.Equals(fileNameWithoutExtension[..prefix.Length], StringComparison.OrdinalIgnoreCase)
                     && (fileNameWithoutExtension.Length == prefix.Length || _namingOptions.MediaFlagDelimiters.Contains(fileNameWithoutExtension[prefix.Length])))
                 {
-                    var externalPathInfo = _externalPathParser.ParseFile(file, fileNameWithoutExtension[prefix.Length..].ToString());
+                    var externalPathInfo = _externalPathParser.ParseFile(file, fileNameWithoutExtension[prefix.Length..]);
 
                     if (externalPathInfo is not null)
                     {
@@ -310,7 +310,7 @@ namespace MediaBrowser.Providers.MediaInfo
                     && prefix.Equals(fileNameWithoutExtension[..prefix.Length], StringComparison.OrdinalIgnoreCase)
                     && (fileNameWithoutExtension.Length == prefix.Length || _namingOptions.MediaFlagDelimiters.Contains(fileNameWithoutExtension[prefix.Length])))
                 {
-                    var externalPathInfo = _externalPathParser.ParseFile(file, fileNameWithoutExtension[prefix.Length..].ToString());
+                    var externalPathInfo = _externalPathParser.ParseFile(file, fileNameWithoutExtension[prefix.Length..]);
 
                     if (externalPathInfo is not null)
                     {
