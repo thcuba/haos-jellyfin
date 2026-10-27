@@ -15,6 +15,7 @@ namespace Emby.Naming.AudioBook
     {
         private readonly NamingOptions _options;
         private readonly AudioBookResolver _audioBookResolver;
+        private readonly AudioBookNameParser _audioBookNameParser;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AudioBookListResolver"/> class.
@@ -24,6 +25,8 @@ namespace Emby.Naming.AudioBook
         {
             _options = options;
             _audioBookResolver = new AudioBookResolver(_options);
+            // Cache stateless parser instance to avoid heap allocations per resolution stack.
+            _audioBookNameParser = new AudioBookNameParser(_options);
         }
 
         /// <summary>
@@ -49,7 +52,7 @@ namespace Emby.Naming.AudioBook
 
                 stackFiles.Sort();
 
-                var nameParserResult = new AudioBookNameParser(_options).Parse(stack.Name);
+                var nameParserResult = _audioBookNameParser.Parse(stack.Name);
 
                 FindExtraAndAlternativeFiles(ref stackFiles, out var extras, out var alternativeVersions, nameParserResult);
 
@@ -138,8 +141,9 @@ namespace Emby.Naming.AudioBook
 
         private AudioBookFileInfo FindMainAudioBookFile(List<AudioBookFileInfo> files, string name)
         {
-            var main = files.Find(x => Path.GetFileNameWithoutExtension(x.Path).Equals(name, StringComparison.OrdinalIgnoreCase));
-            main ??= files.FirstOrDefault(x => Path.GetFileNameWithoutExtension(x.Path).Equals("audiobook", StringComparison.OrdinalIgnoreCase));
+            // Use Path.GetFileNameWithoutExtension with ReadOnlySpan<char> to avoid heap string allocations per item
+            var main = files.Find(x => Path.GetFileNameWithoutExtension(x.Path.AsSpan()).Equals(name, StringComparison.OrdinalIgnoreCase));
+            main ??= files.FirstOrDefault(x => Path.GetFileNameWithoutExtension(x.Path.AsSpan()).Equals("audiobook", StringComparison.OrdinalIgnoreCase));
             main ??= files.OrderBy(x => x.Container)
                 .ThenBy(x => x.Path)
                 .First();
