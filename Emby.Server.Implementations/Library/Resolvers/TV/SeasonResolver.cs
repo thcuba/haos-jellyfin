@@ -7,6 +7,7 @@ using System.Linq;
 using Emby.Naming.Common;
 using Emby.Naming.TV;
 using Emby.Server.Implementations.Library;
+using Jellyfin.Extensions;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
@@ -83,8 +84,9 @@ namespace Emby.Server.Implementations.Library.Resolvers.TV
                         return null;
                     }
 
+                    // Pass ReadOnlySpan<char> extension to Jellyfin.Extensions.Contains to avoid heap string allocations per enumerated file
                     var hasAnyVideo = Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories)
-                        .Any(file => _namingOptions.VideoFileExtensions.Contains(Path.GetExtension(file)));
+                        .Any(file => _namingOptions.VideoFileExtensions.Contains(Path.GetExtension(file.AsSpan()), StringComparison.OrdinalIgnoreCase));
 
                     if (!hasAnyVideo)
                     {
