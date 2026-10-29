@@ -377,15 +377,18 @@ namespace MediaBrowser.XbmcMetadata.Parsers
 
                         if (!string.IsNullOrWhiteSpace(val))
                         {
-                            item.LockedFields = val.Split('|').Select(i =>
+                            // Optimize delimited string field parsing with zero-allocation span splitting.
+                            var list = new List<MetadataField>();
+                            foreach (var part in val.AsSpan().Split('|'))
                             {
-                                if (Enum.TryParse(i, true, out MetadataField field))
+                                var trimmed = part.Trim();
+                                if (!trimmed.IsEmpty && Enum.TryParse<MetadataField>(trimmed, ignoreCase: true, out var field))
                                 {
-                                    return (MetadataField?)field;
+                                    list.Add(field);
                                 }
+                            }
 
-                                return null;
-                            }).OfType<MetadataField>().ToArray();
+                            item.LockedFields = list.ToArray();
                         }
 
                         break;
@@ -400,10 +403,18 @@ namespace MediaBrowser.XbmcMetadata.Parsers
 
                         if (!string.IsNullOrWhiteSpace(val))
                         {
-                            item.ProductionLocations = val.Split('/')
-                                .Select(i => i.Trim())
-                                .Where(i => !string.IsNullOrWhiteSpace(i))
-                                .ToArray();
+                            // Optimize delimited string field parsing with zero-allocation span splitting.
+                            var list = new List<string>();
+                            foreach (var part in val.AsSpan().Split('/'))
+                            {
+                                var trimmed = part.Trim();
+                                if (!trimmed.IsEmpty)
+                                {
+                                    list.Add(trimmed.ToString());
+                                }
+                            }
+
+                            item.ProductionLocations = list.ToArray();
                         }
 
                         break;
@@ -455,17 +466,18 @@ namespace MediaBrowser.XbmcMetadata.Parsers
 
                         if (!string.IsNullOrWhiteSpace(val))
                         {
-                            var parts = val.Split('/').Select(i => i.Trim())
-                                .Where(i => !string.IsNullOrEmpty(i));
-
-                            foreach (var p in parts.Select(v => new PersonInfo { Name = v.Trim(), Type = PersonKind.Writer }))
+                            // Optimize delimited string field parsing with zero-allocation span splitting.
+                            foreach (var part in val.AsSpan().Split('/'))
                             {
-                                if (string.IsNullOrWhiteSpace(p.Name))
+                                var trimmed = part.Trim();
+                                if (!trimmed.IsEmpty)
                                 {
-                                    continue;
+                                    itemResult.AddPerson(new PersonInfo
+                                    {
+                                        Name = trimmed.ToString(),
+                                        Type = PersonKind.Writer
+                                    });
                                 }
-
-                                itemResult.AddPerson(p);
                             }
                         }
 
@@ -579,13 +591,14 @@ namespace MediaBrowser.XbmcMetadata.Parsers
 
                         if (!string.IsNullOrWhiteSpace(val))
                         {
-                            var parts = val.Split('/')
-                                .Select(i => i.Trim())
-                                .Where(i => !string.IsNullOrWhiteSpace(i));
-
-                            foreach (var p in parts)
+                            // Optimize delimited string field parsing with zero-allocation span splitting.
+                            foreach (var part in val.AsSpan().Split('/'))
                             {
-                                item.AddGenre(p);
+                                var trimmed = part.Trim();
+                                if (!trimmed.IsEmpty)
+                                {
+                                    item.AddGenre(trimmed.ToString());
+                                }
                             }
                         }
 
