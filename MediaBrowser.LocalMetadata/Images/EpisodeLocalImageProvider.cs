@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Jellyfin.Extensions;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
@@ -34,15 +33,28 @@ namespace MediaBrowser.LocalMetadata.Images
             var parentPath = Path.GetDirectoryName(item.Path);
             if (parentPath is null)
             {
-                return Enumerable.Empty<LocalImageInfo>();
+                return Array.Empty<LocalImageInfo>();
             }
 
             var parentPathFiles = directoryService.GetFiles(parentPath);
-            var nameWithoutExtension = Path.GetFileNameWithoutExtension(item.Path.AsSpan()).ToString();
+            // Use ReadOnlySpan<char> directly to avoid string allocation for episode filename without extension
+            var nameWithoutExtension = Path.GetFileNameWithoutExtension(item.Path.AsSpan());
 
             var images = GetImageFilesFromFolder(nameWithoutExtension, parentPathFiles);
 
-            var metadataSubDir = directoryService.GetDirectories(parentPath).FirstOrDefault(d => d.Name.Equals("metadata", StringComparison.Ordinal));
+            // Use an indexed loop instead of LINQ FirstOrDefault to avoid delegate and closure allocations
+            var subDirs = directoryService.GetDirectories(parentPath);
+            FileSystemMetadata? metadataSubDir = null;
+            for (var i = 0; i < subDirs.Count; i++)
+            {
+                var dir = subDirs[i];
+                if (dir.Name.Equals("metadata", StringComparison.Ordinal))
+                {
+                    metadataSubDir = dir;
+                    break;
+                }
+            }
+
             if (metadataSubDir is not null)
             {
                 var files = directoryService.GetFiles(metadataSubDir.FullName);
@@ -55,7 +67,6 @@ namespace MediaBrowser.LocalMetadata.Images
         private List<LocalImageInfo> GetImageFilesFromFolder(ReadOnlySpan<char> filenameWithoutExtension, List<FileSystemMetadata> filePaths)
         {
             var list = new List<LocalImageInfo>(1);
-            var thumbName = string.Concat(filenameWithoutExtension, "-thumb");
 
             foreach (var i in filePaths)
             {
@@ -72,7 +83,10 @@ namespace MediaBrowser.LocalMetadata.Images
                     {
                         list.Add(new LocalImageInfo { FileInfo = i, Type = ImageType.Primary });
                     }
-                    else if (currentNameWithoutExtension.Equals(thumbName, StringComparison.OrdinalIgnoreCase))
+                    // Perform zero-allocation span checks for "-thumb" suffix matching instead of string concatenation
+                    else if (currentNameWithoutExtension.EndsWith("-thumb", StringComparison.OrdinalIgnoreCase)
+                        && currentNameWithoutExtension.Length == filenameWithoutExtension.Length + 6
+                        && currentNameWithoutExtension.StartsWith(filenameWithoutExtension, StringComparison.OrdinalIgnoreCase))
                     {
                         list.Add(new LocalImageInfo { FileInfo = i, Type = ImageType.Primary });
                     }
