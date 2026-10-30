@@ -181,15 +181,18 @@ namespace MediaBrowser.LocalMetadata.Parsers
 
                         if (!string.IsNullOrWhiteSpace(val))
                         {
-                            item.LockedFields = val.Split('|').Select(i =>
+                            // Optimize delimited string field parsing with zero-allocation span splitting.
+                            var list = new List<MetadataField>();
+                            foreach (var part in val.AsSpan().Split('|'))
                             {
-                                if (Enum.TryParse(i, true, out MetadataField field))
+                                var trimmed = part.Trim();
+                                if (!trimmed.IsEmpty && Enum.TryParse<MetadataField>(trimmed, ignoreCase: true, out var field))
                                 {
-                                    return (MetadataField?)field;
+                                    list.Add(field);
                                 }
+                            }
 
-                                return null;
-                            }).Where(i => i.HasValue).Select(i => i!.Value).ToArray();
+                            item.LockedFields = list.ToArray();
                         }
 
                         break;
