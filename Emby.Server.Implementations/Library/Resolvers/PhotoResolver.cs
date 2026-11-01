@@ -103,17 +103,27 @@ namespace Emby.Server.Implementations.Library.Resolvers
         {
             ArgumentNullException.ThrowIfNull(path);
 
-            var extension = Path.GetExtension(path.AsSpan()).TrimStart('.');
+            return IsImageFile(path.AsSpan(), imageProcessor);
+        }
+
+        internal static bool IsImageFile(ReadOnlySpan<char> path, IImageProcessor imageProcessor)
+        {
+            var extension = Path.GetExtension(path).TrimStart('.');
             if (!imageProcessor.SupportedInputFormats.Contains(extension, StringComparison.OrdinalIgnoreCase))
             {
                 return false;
             }
 
+            // Use ReadOnlySpan<char> directly to avoid string allocations for filename
             var filename = Path.GetFileNameWithoutExtension(path);
 
-            if (_ignoreFiles.Any(i => filename.StartsWith(i, StringComparison.OrdinalIgnoreCase)))
+            // Use indexed loop instead of LINQ Any to avoid delegate and closure allocations
+            for (var i = 0; i < _ignoreFiles.Length; i++)
             {
-                return false;
+                if (filename.StartsWith(_ignoreFiles[i], StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
             }
 
             return true;
