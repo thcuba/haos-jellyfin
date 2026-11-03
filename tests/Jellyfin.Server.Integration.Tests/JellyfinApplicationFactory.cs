@@ -87,12 +87,13 @@ namespace Jellyfin.Server.Integration.Tests
                 Path.Combine(webHostPathRoot, "cache"),
                 Path.Combine(webHostPathRoot, "jellyfin-web"));
 
-            // Create the logging config file
-            // TODO: We shouldn't need to do this since we are only logging to console
-            StartupHelpers.InitLoggingConfigFile(appPaths).GetAwaiter().GetResult();
-
             // Create a copy of the application configuration to use for startup
-            var startupConfig = Program.CreateAppConfiguration(commandLineOpts, appPaths);
+            var startupConfig = new ConfigurationBuilder()
+                .SetBasePath(appPaths.ConfigurationDirectoryPath)
+                .AddInMemoryCollection(ConfigurationOptions.DefaultConfiguration)
+                .AddEnvironmentVariables("JELLYFIN_")
+                .AddInMemoryCollection(commandLineOpts.ConvertToConfig())
+                .Build();
 
             ILoggerFactory loggerFactory = new SerilogLoggerFactory();
 
