@@ -68,14 +68,14 @@ namespace Emby.Server.Implementations.Library.Resolvers
 
             foreach (var file in files)
             {
-                if (!file.IsDirectory && PhotoResolver.IsImageFile(file.FullName, _imageProcessor))
+                if (!file.IsDirectory && PhotoResolver.IsImageFile(file.FullName.AsSpan(), _imageProcessor))
                 {
-                    var filename = file.Name;
+                    var filename = file.Name.AsSpan();
                     var ownedByMedia = false;
 
                     foreach (var siblingFile in files)
                     {
-                        if (PhotoResolver.IsOwnedByMedia(_namingOptions, siblingFile.FullName, filename))
+                        if (PhotoResolver.IsOwnedByMedia(_namingOptions, siblingFile.FullName.AsSpan(), filename))
                         {
                             ownedByMedia = true;
                             break;

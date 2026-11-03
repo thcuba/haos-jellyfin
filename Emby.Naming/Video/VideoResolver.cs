@@ -118,7 +118,18 @@ namespace Emby.Naming.Video
         /// <returns>True if is video file.</returns>
         public static bool IsVideoFile(string path, NamingOptions namingOptions)
         {
-            var extension = Path.GetExtension(path.AsSpan());
+            return IsVideoFile(path.AsSpan(), namingOptions);
+        }
+
+        /// <summary>
+        /// Determines if path is video file based on extension.
+        /// </summary>
+        /// <param name="path">Path to file.</param>
+        /// <param name="namingOptions">The naming options.</param>
+        /// <returns>True if is video file.</returns>
+        public static bool IsVideoFile(ReadOnlySpan<char> path, NamingOptions namingOptions)
+        {
+            var extension = Path.GetExtension(path);
             return namingOptions.VideoFileExtensions.Contains(extension, StringComparison.OrdinalIgnoreCase);
         }
 

@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Emby.Naming.Common;
 using Emby.Naming.Video;
@@ -189,6 +190,20 @@ namespace Jellyfin.Naming.Tests.Video
             {
                 Assert.Null(result?.Container);
             }
+        }
+
+        [Theory]
+        [InlineData("movie.mkv", true)]
+        [InlineData("movie.mp4", true)]
+        [InlineData("movie.avi", true)]
+        [InlineData("/path/to/movie.MKV", true)]
+        [InlineData("photo.jpg", false)]
+        [InlineData("document.pdf", false)]
+        [InlineData("", false)]
+        public void IsVideoFile_ReadOnlySpan_ReturnsExpected(string path, bool expected)
+        {
+            Assert.Equal(expected, VideoResolver.IsVideoFile(path, _namingOptions));
+            Assert.Equal(expected, VideoResolver.IsVideoFile(path.AsSpan(), _namingOptions));
         }
     }
 }

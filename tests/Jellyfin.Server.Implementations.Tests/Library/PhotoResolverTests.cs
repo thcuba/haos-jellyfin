@@ -106,4 +106,21 @@ public class PhotoResolverTests
 
         Assert.Null(item);
     }
+
+    [Theory]
+    [InlineData("video.mkv", "video-poster.jpg", true)]
+    [InlineData("video.mkv", "video.jpg", true)]
+    [InlineData("video.mp4", "other.jpg", false)]
+    [InlineData("photo.jpg", "photo-thumb.jpg", false)] // Sibling is not a video file
+    public void IsOwnedByMedia_ReadOnlySpan_ReturnsExpected(string videoFile, string imageFile, bool expected)
+    {
+        var namingOptions = new NamingOptions();
+        var imageFilename = Path.GetFileNameWithoutExtension(imageFile.AsSpan());
+
+        // Test string overload
+        Assert.Equal(expected, PhotoResolver.IsOwnedByMedia(namingOptions, videoFile, imageFilename));
+
+        // Test ReadOnlySpan<char> overload
+        Assert.Equal(expected, PhotoResolver.IsOwnedByMedia(namingOptions, videoFile.AsSpan(), imageFilename));
+    }
 }
