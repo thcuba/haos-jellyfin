@@ -8,12 +8,12 @@ namespace MediaBrowser.Model.Providers
         /// <summary>
         /// Initializes a new instance of the <see cref="ExternalIdInfo"/> class.
         /// </summary>
-        /// <param name="name">Name of the external id provider (IE: IMDB, MusicBrainz, etc).</param>
+        /// <param name="providerName">Name of the external id provider (IE: IMDB, MusicBrainz, etc).</param>
         /// <param name="key">Key for this id. This key should be unique across all providers.</param>
         /// <param name="type">Specific media type for this id.</param>
-        public ExternalIdInfo(string name, string key, ExternalIdMediaType? type)
+        public ExternalIdInfo(string providerName, string key, ExternalIdMediaType? type)
         {
-            Name = name;
+            ProviderName = providerName;
             Key = key;
             Type = type;
         }
@@ -21,8 +21,7 @@ namespace MediaBrowser.Model.Providers
         /// <summary>
         /// Gets or sets the display name of the external id provider (IE: IMDB, MusicBrainz, etc).
         /// </summary>
-        // TODO: This should be renamed to ProviderName
-        public string Name { get; set; }
+        public string ProviderName { get; set; }
 
         /// <summary>
         /// Gets or sets the unique key for this id. This key should be unique across all providers.
@@ -37,7 +36,7 @@ namespace MediaBrowser.Model.Providers
         /// default id for the external provider so there is no need to specify a type.
         /// </summary>
         /// <remarks>
-        /// This can be used along with the <see cref="Name"/> to localize the external id on the client.
+        /// This can be used along with the <see cref="ProviderName"/> to localize the external id on the client.
         /// </remarks>
         public ExternalIdMediaType? Type { get; set; }
     }
