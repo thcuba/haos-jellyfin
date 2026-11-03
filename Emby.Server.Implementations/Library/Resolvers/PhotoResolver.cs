@@ -93,6 +93,11 @@ namespace Emby.Server.Implementations.Library.Resolvers
 
         internal static bool IsOwnedByMedia(NamingOptions namingOptions, string file, ReadOnlySpan<char> imageFilename)
         {
+            return IsOwnedByMedia(namingOptions, file.AsSpan(), imageFilename);
+        }
+
+        internal static bool IsOwnedByMedia(NamingOptions namingOptions, ReadOnlySpan<char> file, ReadOnlySpan<char> imageFilename)
+        {
             return VideoResolver.IsVideoFile(file, namingOptions) && IsOwnedByResolvedMedia(file, imageFilename);
         }
 
