@@ -1,4 +1,6 @@
 using System;
+using System.Buffers;
+using System.Buffers.Text;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -16,9 +18,24 @@ namespace Jellyfin.Extensions.Json.Converters
                 ? Guid.Empty
                 : ReadInternal(ref reader);
 
-        // TODO: optimize by parsing the UTF8 bytes instead of converting to string first
+        // Optimized to parse UTF-8 bytes directly without intermediate string allocation.
+        // TryGetGuid fast-paths standard RFC 4122 dashed GUIDs (36 bytes).
+        // Utf8Parser.TryParse fast-paths Jellyfin's standard "N" format undashed GUIDs (32 bytes).
         internal static Guid ReadInternal(ref Utf8JsonReader reader)
-            => Guid.Parse(reader.GetString()!); // null got handled higher up the call stack
+        {
+            if (reader.TryGetGuid(out var value))
+            {
+                return value;
+            }
+
+            ReadOnlySpan<byte> utf8Span = reader.HasValueSequence ? reader.ValueSequence.ToArray() : reader.ValueSpan;
+            if (Utf8Parser.TryParse(utf8Span, out Guid guid, out int bytesConsumed, 'N') && bytesConsumed == utf8Span.Length)
+            {
+                return guid;
+            }
+
+            return Guid.Parse(reader.GetString()!); // null got handled higher up the call stack
+        }
 
         /// <inheritdoc />
         public override void Write(Utf8JsonWriter writer, Guid value, JsonSerializerOptions options)
