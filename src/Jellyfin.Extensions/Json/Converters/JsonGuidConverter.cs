@@ -41,7 +41,12 @@ namespace Jellyfin.Extensions.Json.Converters
         public override void Write(Utf8JsonWriter writer, Guid value, JsonSerializerOptions options)
             => WriteInternal(writer, value);
 
+        // Optimized to write UTF-8 formatted bytes directly to avoid intermediate string heap allocation.
         internal static void WriteInternal(Utf8JsonWriter writer, Guid value)
-            => writer.WriteStringValue(value.ToString("N", CultureInfo.InvariantCulture));
+        {
+            Span<byte> utf8Span = stackalloc byte[32];
+            Utf8Formatter.TryFormat(value, utf8Span, out _, 'N');
+            writer.WriteStringValue(utf8Span);
+        }
     }
 }
