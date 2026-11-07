@@ -11,6 +11,9 @@ namespace Jellyfin.Extensions.Json.Converters
     /// </summary>
     public class JsonDateTimeConverter : JsonConverter<DateTime>
     {
+        private const string ZeroMillisecondFormat = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffffffZ";
+        private const int MaxDateTimeCharLength = 35;
+
         /// <inheritdoc />
         public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
@@ -23,7 +26,16 @@ namespace Jellyfin.Extensions.Json.Converters
             if (value.Millisecond == 0)
             {
                 // Remaining ticks value will be 0, manually format.
-                writer.WriteStringValue(value.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffffffZ", CultureInfo.InvariantCulture));
+                // Stack-allocate a character buffer to format directly without heap string allocation.
+                Span<char> buffer = stackalloc char[MaxDateTimeCharLength];
+                if (value.TryFormat(buffer, out int charsWritten, ZeroMillisecondFormat, CultureInfo.InvariantCulture))
+                {
+                    writer.WriteStringValue(buffer[..charsWritten]);
+                }
+                else
+                {
+                    writer.WriteStringValue(value.ToString(ZeroMillisecondFormat, CultureInfo.InvariantCulture));
+                }
             }
             else
             {
