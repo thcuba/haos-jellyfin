@@ -123,3 +123,9 @@
 **Learning:** Calling `enumValue.ToString()` inside `JsonFlagEnumConverter<T>.Write()` allocates a new heap `string` on every matched flag during JSON serialization of flag enums (such as `TranscodeReason`). Pre-caching `(T Value, string Name)[]` statically per generic enum type pairs each flag with its string representation at type initialization time, eliminating 100% of the runtime string heap allocations (0 bytes allocated vs 36 MB over 500k iterations) and cutting execution time in half (~216 ms vs ~421 ms).
 
 **Action:** Pre-cache static `(T Value, string Name)[]` arrays using `Enum.GetValues<T>()` and `Enum.GetNames<T>()` in generic enum converters to avoid `ToString()` string heap allocations during serialization loops.
+
+## 2026-11-12 - Static default enum caching in JsonDefaultStringEnumConverter
+
+**Learning:** Calling `typeToConvert.GetCustomAttribute<DefaultValueAttribute>()` dynamically inside `Read()` performs reflection and attribute instantiation on every null/empty enum deserialization, allocating attribute instances and slowing down JSON parsing (~2471 ms and 290 MB allocated over 500k iterations). Storing the resolved default value in a static readonly `_defaultValue` field per generic type `T` caches the result at type initialization time, eliminating 100% of the reflection allocations (0 MB allocated) and dropping execution time to ~193 ms (>10x speedup).
+
+**Action:** Pre-cache type-level attributes (like `DefaultValueAttribute`) statically in generic JSON converters rather than querying them via reflection during `Read()`.

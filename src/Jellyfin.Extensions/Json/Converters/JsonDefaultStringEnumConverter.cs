@@ -13,6 +13,9 @@ namespace Jellyfin.Extensions.Json.Converters;
 public class JsonDefaultStringEnumConverter<T> : JsonConverter<T>
     where T : struct, Enum
 {
+    // Pre-cache the default enum value statically per enum type T to avoid reflection on every deserialization.
+    private static readonly T _defaultValue = GetDefaultValue();
+
     private readonly JsonConverter<T> _baseConverter;
 
     /// <summary>
@@ -29,16 +32,21 @@ public class JsonDefaultStringEnumConverter<T> : JsonConverter<T>
     {
         if (reader.IsNull() || reader.IsEmptyString())
         {
-            var customValueAttribute = typeToConvert.GetCustomAttribute<DefaultValueAttribute>();
-            if (customValueAttribute?.Value is null)
-            {
-                throw new InvalidOperationException($"Default value not set for '{typeToConvert.Name}'");
-            }
-
-            return (T)customValueAttribute.Value;
+            return _defaultValue;
         }
 
         return _baseConverter.Read(ref reader, typeToConvert, options);
+    }
+
+    private static T GetDefaultValue()
+    {
+        var customValueAttribute = typeof(T).GetCustomAttribute<DefaultValueAttribute>();
+        if (customValueAttribute?.Value is null)
+        {
+            throw new InvalidOperationException($"Default value not set for '{typeof(T).Name}'");
+        }
+
+        return (T)customValueAttribute.Value;
     }
 
     /// <inheritdoc />
