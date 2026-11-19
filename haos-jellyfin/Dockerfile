@@ -26,7 +26,10 @@ RUN apt-get update \
         mesa-vulkan-drivers \
         libvulkan1 \
     && if [ "$TARGETARCH" = "amd64" ]; then \
-        sed -i -E 's/^Components:(.*)/Components:\1 contrib non-free/' /etc/apt/sources.list.d/*.sources 2>/dev/null \
+        # Enable contrib and non-free components for apt-get.
+        # This modification targets common 'deb' lines in sources.list and .list files.
+        # Errors from sed (e.g., no matching files) are suppressed to avoid build failure.
+        sed -i -E 's/( main)/\1 contrib non-free/' /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null \
             && apt-get update \
             && apt-get install -y --no-install-recommends \
                 intel-media-va-driver-non-free \
